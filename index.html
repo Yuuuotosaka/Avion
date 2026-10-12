@@ -60,7 +60,7 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 .callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(56px,9vw,96px);line-height:.92;color:var(--sign)}
 .model{font-size:18px;color:var(--cloud);margin-top:2px}
 
-/* Route & Aéroports complets */
+/* Route & Aéroports */
 .route-box{
   background:rgba(22,34,61,0.45);
   border:1px solid var(--line);
@@ -139,71 +139,174 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 const RAYON_KM = 90;
 const RAFRAICHIR_SEC = 10;
 
-/* ===== Base de données des villes / aéroports principaux ===== */
+/* ===== Base locale d'aéroports (France, Dom-Tom & Hubs majeurs) ===== */
 const AIRPORTS = {
-  // France
+  // France Métropole
   CDG: { ville: "Paris", nom: "Charles de Gaulle" },
   ORY: { ville: "Paris", nom: "Orly" },
-  BVA: { ville: "Paris", nom: "Beauvais" },
+  BVA: { ville: "Paris-Beauvais", nom: "Tillé" },
+  LRH: { ville: "La Rochelle", nom: "Île de Ré" },
   LYS: { ville: "Lyon", nom: "Saint-Exupéry" },
   NCE: { ville: "Nice", nom: "Côte d'Azur" },
   MRS: { ville: "Marseille", nom: "Provence" },
   TLS: { ville: "Toulouse", nom: "Blagnac" },
   BOD: { ville: "Bordeaux", nom: "Mérignac" },
   NTE: { ville: "Nantes", nom: "Atlantique" },
+  LIL: { ville: "Lille", nom: "Lesquin" },
   BSL: { ville: "Bâle-Mulhouse", nom: "EuroAirport" },
   MLH: { ville: "Mulhouse", nom: "EuroAirport" },
   SXB: { ville: "Strasbourg", nom: "Entzheim" },
   MPL: { ville: "Montpellier", nom: "Méditerranée" },
+  BZR: { ville: "Béziers", nom: "Cap d'Agde" },
+  PGF: { ville: "Perpignan", nom: "Rivesaltes" },
+  CCF: { ville: "Carcassonne", nom: "Salvaza" },
+  FNI: { ville: "Nîmes", nom: "Alès-Camargue" },
+  AVN: { ville: "Avignon", nom: "Provence" },
+  TLN: { ville: "Toulon", nom: "Hyères" },
+  BIQ: { ville: "Biarritz", nom: "Pays Basque" },
+  PUF: { ville: "Pau", nom: "Pyrénées" },
+  LDE: { ville: "Tarbes-Lourdes", nom: "Pyrénées" },
+  EGC: { ville: "Bergerac", nom: "Dordogne-Périgord" },
+  PIS: { ville: "Poitiers", nom: "Biard" },
+  LIG: { ville: "Limoges", nom: "Bellegarde" },
+  CFE: { ville: "Clermont-Ferrand", nom: "Auvergne" },
+  RNS: { ville: "Rennes", nom: "Saint-Jacques" },
+  BES: { ville: "Brest", nom: "Bretagne" },
+  UIP: { ville: "Quimper", nom: "Bretagne" },
+  LRT: { ville: "Lorient", nom: "Bretagne Sud" },
+  DNR: { ville: "Dinard", nom: "Pleurtuit" },
+  DOL: { ville: "Deauville", nom: "Normandie" },
+  CFR: { ville: "Caen", nom: "Carpiquet" },
+  LEH: { ville: "Le Havre", nom: "Octeville" },
+  URO: { ville: "Rouen", nom: "Vallée de Seine" },
+  TUF: { ville: "Tours", nom: "Val de Loire" },
+  CET: { ville: "Cholet", nom: "Le Pontreau" },
+  ANE: { ville: "Angers", nom: "Loire" },
+  LEI: { ville: "Le Mans", nom: "Arnage" },
+  EDM: { ville: "La Roche-sur-Yon", nom: "Les Ajoncs" },
+  GNB: { ville: "Grenoble", nom: "Alpes-Isère" },
+  CMF: { ville: "Chambéry", nom: "Savoie Mont-Blanc" },
+  NCY: { ville: "Annecy", nom: "Mont-Blanc" },
+  DIL: { ville: "Dijon", nom: "Bourgogne" },
+  DLE: { ville: "Dole", nom: "Jura" },
+  ETZ: { ville: "Metz-Nancy", nom: "Lorraine" },
+  ENC: { ville: "Nancy", nom: "Essey" },
+  RHE: { ville: "Reims", nom: "Champagne" },
   FSC: { ville: "Figari", nom: "Sud-Corse" },
   AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte" },
   BIA: { ville: "Bastia", nom: "Poretta" },
-  BIQ: { ville: "Biarritz", nom: "Pays Basque" },
-  BES: { ville: "Brest", nom: "Bretagne" },
-  RNS: { ville: "Rennes", nom: "Saint-Jacques" },
-  PGF: { ville: "Perpignan", nom: "Rivesaltes" },
-  TLN: { ville: "Toulon", nom: "Hyères" },
-  AVN: { ville: "Avignon", nom: "Provence" },
-  CCF: { ville: "Carcassonne", nom: "Salvaza" },
-  FNI: { ville: "Nîmes", nom: "Garon" },
-  // Europe & Maghreb
+  CLY: { ville: "Calvi", nom: "Sainte-Catherine" },
+
+  // Royaume-Uni & Irlande
   LHR: { ville: "Londres", nom: "Heathrow" },
   LGW: { ville: "Londres", nom: "Gatwick" },
   STN: { ville: "Londres", nom: "Stansted" },
-  AMS: { ville: "Amsterdam", nom: "Schiphol" },
-  FRA: { ville: "Francfort", nom: "Main" },
-  MUC: { ville: "Munich", nom: "Franz Josef Strauß" },
+  LTN: { ville: "Londres", nom: "Luton" },
+  LCY: { ville: "Londres", nom: "City" },
+  SEN: { ville: "Londres", nom: "Southend" },
+  MAN: { ville: "Manchester", nom: "Airport" },
+  BHX: { ville: "Birmingham", nom: "Airport" },
+  EDI: { ville: "Édimbourg", nom: "Airport" },
+  GLA: { ville: "Glasgow", nom: "Airport" },
+  BRS: { ville: "Bristol", nom: "Airport" },
+  DUB: { ville: "Dublin", nom: "Airport" },
+  ORK: { ville: "Cork", nom: "Airport" },
+
+  // Péninsule Ibérique
   MAD: { ville: "Madrid", nom: "Barajas" },
   BCN: { ville: "Barcelone", nom: "El Prat" },
-  FCO: { ville: "Rome", nom: "Fiumicino" },
-  MXP: { ville: "Milan", nom: "Malpensa" },
-  BRU: { ville: "Bruxelles", nom: "Zaventem" },
-  CRL: { ville: "Charleroi", nom: "Bruxelles-Sud" },
-  GVA: { ville: "Genève", nom: "Cointrin" },
-  ZRH: { ville: "Zurich", nom: "Kloten" },
+  VLC: { ville: "Valence", nom: "Manises" },
+  ALC: { ville: "Alicante", nom: "Elche" },
+  AGP: { ville: "Malaga", nom: "Costa del Sol" },
+  SVQ: { ville: "Séville", nom: "San Pablo" },
+  PMI: { ville: "Palma de Majorque", nom: "Son Sant Joan" },
+  IBZ: { ville: "Ibiza", nom: "Airport" },
+  MAH: { ville: "Minorque", nom: "Airport" },
+  BIO: { ville: "Bilbao", nom: "Airport" },
   LIS: { ville: "Lisbonne", nom: "Humberto Delgado" },
   OPO: { ville: "Porto", nom: "Francisco Sá Carneiro" },
-  DUB: { ville: "Dublin", nom: "Airport" },
+  FAO: { ville: "Faro", nom: "Algarve" },
+
+  // Italie & Suisse & Benelux
+  FCO: { ville: "Rome", nom: "Fiumicino" },
+  CIA: { ville: "Rome", nom: "Ciampino" },
+  MXP: { ville: "Milan", nom: "Malpensa" },
+  LIN: { ville: "Milan", nom: "Linate" },
+  BGY: { ville: "Milan-Bergame", nom: "Orio al Serio" },
+  VCE: { ville: "Venise", nom: "Marco Polo" },
+  NAP: { ville: "Naples", nom: "Capodichino" },
+  CTA: { ville: "Catane", nom: "Fontanarossa" },
+  PMO: { ville: "Palerme", nom: "Falcone-Borsellino" },
+  BLQ: { ville: "Bologne", nom: "Guglielmo Marconi" },
+  PSA: { ville: "Pise", nom: "Galileo Galilei" },
+  GVA: { ville: "Genève", nom: "Cointrin" },
+  ZRH: { ville: "Zurich", nom: "Kloten" },
+  BRU: { ville: "Bruxelles", nom: "Zaventem" },
+  CRL: { ville: "Charleroi", nom: "Bruxelles-Sud" },
+  AMS: { ville: "Amsterdam", nom: "Schiphol" },
+  EIN: { ville: "Eindhoven", nom: "Airport" },
+  LUX: { ville: "Luxembourg", nom: "Findel" },
+
+  // Allemagne, Autriche & Europe Centrale
+  FRA: { ville: "Francfort", nom: "Main" },
+  MUC: { ville: "Munich", nom: "Franz Josef Strauß" },
+  BER: { ville: "Berlin", nom: "Brandenburg" },
+  HAM: { ville: "Hambourg", nom: "Helmut Schmidt" },
+  DUS: { ville: "Düsseldorf", nom: "Airport" },
+  CGN: { ville: "Cologne/Bonn", nom: "Konrad Adenauer" },
+  STR: { ville: "Stuttgart", nom: "Airport" },
   VIE: { ville: "Vienne", nom: "Schwechat" },
-  IST: { ville: "Istanbul", nom: "Havalimanı" },
-  SAW: { ville: "Istanbul", nom: "Sabiha Gökçen" },
+  PRG: { ville: "Prague", nom: "Václav Havel" },
+  WAW: { ville: "Varsovie", nom: "Chopin" },
+  BUD: { ville: "Budapest", nom: "Ferenc Liszt" },
   ATH: { ville: "Athènes", nom: "Elefthérios-Venizélos" },
+
+  // Maghreb & Moyen-Orient
   ALG: { ville: "Alger", nom: "Houari Boumédiène" },
+  ORN: { ville: "Oran", nom: "Ahmed Ben Bella" },
   TUN: { ville: "Tunis", nom: "Carthage" },
   RAK: { ville: "Marrakech", nom: "Ménara" },
   CMN: { ville: "Casablanca", nom: "Mohammed V" },
+  FEZ: { ville: "Fès", nom: "Saïss" },
+  AGA: { ville: "Agadir", nom: "Al Massira" },
   DXB: { ville: "Dubaï", nom: "International" },
   DOH: { ville: "Doha", nom: "Hamad" },
-  JFK: { ville: "New York", nom: "John F. Kennedy" },
-  EWR: { ville: "New York", nom: "Newark" },
-  YUL: { ville: "Montréal", nom: "Trudeau" }
+  IST: { ville: "Istanbul", nom: "Havalimanı" },
+  SAW: { ville: "Istanbul", nom: "Sabiha Gökçen" }
 };
 
+/* Cache dynamique pour résolution d'aéroports inconnus */
+const airportAsyncCache = {};
+
+async function resoudreAeroportEnLigne(code){
+  if(!code || code.length !== 3 || airportAsyncCache[code]) return;
+  airportAsyncCache[code] = true;
+  try{
+    const r = await fetch(`https://raw.githubusercontent.com/mwgg/Airports/master/airports.json`);
+    if(r.ok){
+      const data = await r.json();
+      for(const icao in data){
+        const apt = data[icao];
+        if(apt.iata && apt.iata.toUpperCase() === code){
+          AIRPORTS[code] = { ville: apt.city || apt.name, nom: apt.name };
+          // Rafraîchir l'affichage dès que le nom est résolu
+          const el = document.getElementById("apt-" + code);
+          if(el) el.textContent = `${AIRPORTS[code].ville} (${AIRPORTS[code].nom})`;
+          break;
+        }
+      }
+    }
+  }catch(e){}
+}
+
 function formatAirport(code){
-  if(!code || code === "—") return { code: "—", label: "Inconnu" };
-  const a = AIRPORTS[code.toUpperCase()];
-  if(a) return { code, label: `${a.ville} (${a.nom})` };
-  return { code, label: `Aéroport ${code}` };
+  if(!code || code === "—") return { code: "—", label: "Non renseigné" };
+  const c = code.toUpperCase().trim();
+  const a = AIRPORTS[c];
+  if(a) return { code: c, label: `${a.ville} (${a.nom})` };
+  // Lancer la recherche globale si pas encore connu
+  resoudreAeroportEnLigne(c);
+  return { code: c, label: `Recherche de l'aéroport…` };
 }
 
 /* ===== Position enregistrée ===== */
@@ -246,7 +349,6 @@ function distanceKm(lat1,lon1,lat2,lon2){
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-// Calcul de gisement (direction de l'avion depuis chez soi en degrés)
 function gisement(lat1,lon1,lat2,lon2){
   const r = Math.PI/180;
   const y = Math.sin((lon2-lon1)*r) * Math.cos(lat2*r);
@@ -254,7 +356,7 @@ function gisement(lat1,lon1,lat2,lon2){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
-/* ===== Appel JSONP (contourne CORS) ===== */
+/* ===== Appel JSONP FR24 ===== */
 function jsonpFR24(url, ms = 7000){
   return new Promise((resolve, reject) => {
     const cbName = "fr24_cb_" + Math.random().toString(36).substring(2, 9);
@@ -385,7 +487,7 @@ function genererSvgAvion(t){
 /* ===== Mini-Carte Radar Tactique ===== */
 function genererRadar(pos, ac, dist){
   const azimut = gisement(pos.lat, pos.lon, ac.lat, ac.lon);
-  const rPixelMax = 120; // rayon du radar en px (cercle 90 km)
+  const rPixelMax = 120;
   const distRatio = Math.min(dist / RAYON_KM, 1);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
@@ -397,12 +499,10 @@ function genererRadar(pos, ac, dist){
   return `
     <div class="radar-box" aria-label="Carte radar de position relative">
       <svg viewBox="0 0 300 300">
-        <!-- Cercles de portée : 30 km, 60 km, 90 km -->
         <circle cx="150" cy="150" r="40" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="80" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.5"/>
 
-        <!-- Axes cardinaux -->
         <line x1="150" y1="14" x2="150" y2="286" stroke="#253557" stroke-width="1" opacity="0.5"/>
         <line x1="14" y1="150" x2="286" y2="150" stroke="#253557" stroke-width="1" opacity="0.5"/>
         <g fill="#8fa1c2" font-family="JetBrains Mono" font-size="10" text-anchor="middle">
@@ -411,11 +511,11 @@ function genererRadar(pos, ac, dist){
           <text x="150" y="66" fill="#8fa1c2" opacity="0.6">60 km</text>
         </g>
 
-        <!-- Point central : Ta position -->
+        <!-- Position utilisateur -->
         <circle cx="150" cy="150" r="4" fill="#38bdf8"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="#38bdf8" stroke-width="1" opacity="0.4"/>
 
-        <!-- Cible radar : L'avion réel -->
+        <!-- Cible radar -->
         <g transform="translate(${planeX.toFixed(1)}, ${planeY.toFixed(1)})">
           <line x1="0" y1="0" x2="0" y2="-18" stroke="#ffd23f" stroke-width="1.5" stroke-dasharray="2 2" transform="rotate(${track})"/>
           <g transform="rotate(${track})">
@@ -454,8 +554,8 @@ function dessiner(ac, dist, pos){
           <span>${esc(arr.code)}</span>
         </div>
         <div class="route-sub">
-          <span><b>De :</b> ${esc(dep.label)}</span>
-          <span><b>Vers :</b> ${esc(arr.label)}</span>
+          <span><b>De :</b> <span id="apt-${esc(dep.code)}">${esc(dep.label)}</span></span>
+          <span><b>Vers :</b> <span id="apt-${esc(arr.code)}">${esc(arr.label)}</span></span>
         </div>
       </div>`
     : `<div class="route-box"><div class="route-sub">Trajet non disponible (plan de vol privé ou absent)</div></div>`;
