@@ -263,7 +263,15 @@ async function tick(){
   $("lat").value = pos.lat; $("lon").value = pos.lon;
   try{
     statusEl.textContent = "Recherche…";
-    const liste = (await chercherAvions(pos)).filter(a => typeof a.lat==="number" && typeof a.lon==="number");
+    const avionsBruts = await chercherAvions(pos);
+    const liste = avionsBruts
+      .map(a => ({
+        ...a,
+        lat: parseFloat(a.lat ?? a.lastPosition?.lat),
+        lon: parseFloat(a.lon ?? a.lastPosition?.lon)
+      }))
+      .filter(a => Number.isFinite(a.lat) && Number.isFinite(a.lon));
+
     if(!liste.length){
       content.innerHTML = `<div class="empty">Aucun avion dans un rayon de ${Math.round(RAYON_MN*1.852)} km pour le moment.</div>`;
       statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
