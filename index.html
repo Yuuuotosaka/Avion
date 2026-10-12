@@ -83,10 +83,6 @@ main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
 /* ===== Réglages ===== */
 const RAYON_MN = 50;           // rayon de recherche en milles nautiques (~92 km)
 const RAFRAICHIR_SEC = 10;     // mise à jour toutes les 10 secondes
-const API = [
-  "https://api.adsb.lol/v2/point/",
-  "https://api.airplanes.live/v2/point/"
-];
 
 /* ===== Position enregistrée ===== */
 function lirePos(){
@@ -132,35 +128,71 @@ function distanceKm(lat1,lon1,lat2,lon2){
 /* ===== Récupération des avions ===== */
 function fetchT(url, opts, ms){
   const c = new AbortController();
-  const t = setTimeout(()=>c.abort(), ms || 7000);
+  const t = setTimeout(()=>c.abort(), ms || 8000);
   return fetch(url, Object.assign({}, opts||{}, {signal:c.signal})).finally(()=>clearTimeout(t));
 }
+
 async function chercherAvions(pos){
   const erreurs = [];
-  const essais = [];
-  for(const base of API){
-    essais.push({nom: base.split("/")[2], url: `${base}${pos.lat}/${pos.lon}/${RAYON_MN}`});
-  }
-  /* Secours : passer par un relais public qui ajoute l'autorisation manquante */
-  const RELAIS = [
-    {nom:"allorigins", f:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
-    {nom:"codetabs",   f:u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)}
+  
+  // 1. Essai direct sur les API ADSB principales
+  const sourcesDirectes = [
+    { nom: "adsb.lol", url: `https://api.adsb.lol/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}` },
+    { nom: "airplanes.live", url: `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}` }
   ];
-  for(const rel of RELAIS){
-    for(const base of API){
-      const u = `${base}${pos.lat}/${pos.lon}/${RAYON_MN}`;
-      essais.push({nom: rel.nom+"+"+base.split("/")[2], url: rel.f(u)});
+
+  for(const src of sourcesDirectes){
+    try {
+      const r = await fetchT(src.url, null, 8000);
+      if(r.ok){
+        const j = await r.json();
+        return j.ac || j.aircraft || [];
+      }
+      erreurs.push(`${src.nom} : HTTP ${r.status}`);
+    } catch(e){ erreurs.push(`${src.nom} : ${e.message}`); }
+  }
+
+  // 2. Secours via relais CORS
+  const targetUrl = `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}`;
+  const proxys = [
+    { nom: "corsproxy", url: `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}` },
+    { nom: "allorigins", url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` }
+  ];
+
+  for(const px of proxys){
+    try {
+      const r = await fetchT(px.url, null, 10000);
+      if(r.ok){
+        const j = await r.json();
+        return j.ac || j.aircraft || [];
+      }
+      erreurs.push(`${px.nom} : HTTP ${r.status}`);
+    } catch(e){ erreurs.push(`${px.nom} : ${e.message}`); }
+  }
+
+  // 3. Dernier recours : OpenSky Network
+  try {
+    const delta = 0.8; // zone d'environ 90 km autour du point
+    const rOpenSky = await fetchT(
+      `https://opensky-network.org/api/states/all?lamin=${pos.lat - delta}&lomin=${pos.lon - delta}&lamax=${pos.lat + delta}&lomax=${pos.lon + delta}`,
+      null,
+      9000
+    );
+    if(rOpenSky.ok){
+      const j = await rOpenSky.json();
+      return (j.states || []).map(s => ({
+        hex: s[0],
+        flight: (s[1] || "").trim(),
+        lon: s[5],
+        lat: s[6],
+        alt_baro: s[7] ? Math.round(s[7] * 3.28084) : null,
+        gs: s[9] ? Math.round(s[9] * 1.94384) : null,
+        track: s[10]
+      }));
     }
-  }
-  for(const e1 of essais){
-    try{
-      const r = await fetchT(e1.url, null, 7000);
-      if(!r.ok){ erreurs.push(e1.nom+" : code "+r.status); continue; }
-      const j = await r.json();
-      return j.ac || j.aircraft || [];
-    }catch(e){ erreurs.push(e1.nom+" : "+e.message); }
-  }
-  throw new Error(erreurs.join(" | ") + " | position : " + pos.lat + ", " + pos.lon);
+  } catch(e){ erreurs.push("opensky : " + e.message); }
+
+  throw new Error(erreurs.join(" | ") + ` | position : ${pos.lat}, ${pos.lon}`);
 }
 
 async function chercherPhoto(hex){
