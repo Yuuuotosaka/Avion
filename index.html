@@ -81,7 +81,7 @@ main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
 
 <script>
 /* ===== Réglages ===== */
-const RAYON_KM = 90;
+const RAYON_KM = 80;
 const RAFRAICHIR_SEC = 10;
 
 /* ===== Position enregistrée ===== */
@@ -131,11 +131,11 @@ function fetchT(url, opts, ms){
   return fetch(url, Object.assign({}, opts||{}, {signal:c.signal})).finally(()=>clearTimeout(t));
 }
 
-/* ===== Récupération des avions (OpenSky + fallback ADSB) ===== */
+/* ===== Récupération des données d'avions ===== */
 async function chercherAvions(pos){
   const erreurs = [];
 
-  // 1. OpenSky Network (autorise les appels depuis le navigateur sans clé)
+  // 1. Priorité : OpenSky Network (autorise les appels depuis les navigateurs sans token)
   const deg = RAYON_KM / 111.32;
   const lamin = (pos.lat - deg).toFixed(4);
   const lamax = (pos.lat + deg).toFixed(4);
@@ -160,22 +160,38 @@ async function chercherAvions(pos){
         }));
       }
     }
-    erreurs.push("OpenSky : HTTP " + r.status);
+    erreurs.push(`opensky : HTTP ${r.status}`);
   }catch(e){
-    erreurs.push("OpenSky : " + e.message);
+    erreurs.push(`opensky : ${e.message}`);
   }
 
-  // 2. Relai ADSB de secours (airplanes.live en direct)
+  // 2. Relais AllOrigins (gère le format text/json correctement)
   const rMn = Math.round(RAYON_KM / 1.852);
+  const targetLive = `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${rMn}`;
   try{
-    const r = await fetchT(`https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${rMn}`, null, 6000);
+    const r = await fetchT(`https://api.allorigins.win/get?url=${encodeURIComponent(targetLive)}`, null, 8000);
+    if(r.ok){
+      const wrapper = await r.json();
+      const brut = typeof wrapper.contents === "string" ? JSON.parse(wrapper.contents) : wrapper.contents;
+      const liste = brut.ac || brut.aircraft;
+      if(Array.isArray(liste)) return liste;
+    }
+    erreurs.push(`allorigins : HTTP ${r.status}`);
+  }catch(e){
+    erreurs.push(`allorigins : ${e.message}`);
+  }
+
+  // 3. Appel direct airplanes.live (au cas où le réseau mobile autorise le cross-origin)
+  try{
+    const r = await fetchT(targetLive, null, 6000);
     if(r.ok){
       const j = await r.json();
-      return j.ac || j.aircraft || [];
+      const liste = j.ac || j.aircraft;
+      if(Array.isArray(liste)) return liste;
     }
-    erreurs.push("airplanes.live : HTTP " + r.status);
+    erreurs.push(`direct : HTTP ${r.status}`);
   }catch(e){
-    erreurs.push("airplanes.live : " + e.message);
+    erreurs.push(`direct : ${e.message}`);
   }
 
   throw new Error(erreurs.join(" | ") + ` | position : ${pos.lat}, ${pos.lon}`);
@@ -185,7 +201,7 @@ async function chercherPhoto(hex){
   if(!hex) return null;
   if(hex in photoCache) return photoCache[hex];
   try{
-    const r = await fetchT(`https://api.planespotters.net/pub/photos/hex/${hex}`, null, 6000);
+    const r = await fetchT(`https://api.planespotters.net/pub/photos/hex/${hex}`, null, 5000);
     const j = await r.json();
     const p = j.photos && j.photos[0];
     photoCache[hex] = p ? {src:p.thumbnail_large.src, credit:p.photographer} : null;
@@ -225,7 +241,7 @@ function dessiner(ac, dist, photo, route){
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
   const nom = (ac.flight||"").trim() || ac.r || ac.hex || "Inconnu";
-  const modele = ac.desc || ac.t || (ac.country ? `Pays : ${ac.country}` : "Modèle non renseigné");
+  const modele = ac.desc || ac.t || (ac.country ? `Pays : ${ac.country}` : "Modèle inconnu");
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
 
   const photoHtml = photo
