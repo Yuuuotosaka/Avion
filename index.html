@@ -73,7 +73,7 @@ main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
     <label>Latitude<input id="lat" inputmode="decimal" placeholder="ex. 48.8566"></label>
     <label>Longitude<input id="lon" inputmode="decimal" placeholder="ex. 2.3522"></label>
     <button class="go" id="save" type="button">Enregistrer</button>
-    <p class="hint">Astuce : dans Google Maps, appuie longtemps sur ta position pour copier les coordonnées.</p>
+    <p class="hint">Astuce : appuie longuement sur ta position dans Google Maps pour copier les coordonnées.</p>
   </section>
 
   <div id="content"></div>
@@ -133,20 +133,49 @@ function fetchT(url, opts, ms){
 
 /* ===== Récupération des données d'avions ===== */
 async function chercherAvions(pos){
+  const rMn = Math.round(RAYON_KM / 1.852);
+  const targetLive = `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${rMn}`;
   const erreurs = [];
 
-  // 1. Priorité : OpenSky Network (autorise les appels depuis les navigateurs sans token)
+  // 1. AllOrigins en priorité absolue (format brut .raw d'abord)
+  try {
+    const rRaw = await fetchT(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetLive)}&_=${Date.now()}`, null, 8000);
+    if(rRaw.ok){
+      const data = await rRaw.json();
+      const liste = data.ac || data.aircraft;
+      if(Array.isArray(liste)) return liste;
+    }
+  } catch(e){}
+
+  // 2. AllOrigins format /get avec décodage multi-niveau
+  try {
+    const rGet = await fetchT(`https://api.allorigins.win/get?url=${encodeURIComponent(targetLive)}&_=${Date.now()}`, null, 9000);
+    if(rGet.ok){
+      const j = await rGet.json();
+      let payload = j.contents;
+      if(typeof payload === "string"){
+        try { payload = JSON.parse(payload); } catch(err){}
+      }
+      if(payload && typeof payload === "object"){
+        const liste = payload.ac || payload.aircraft;
+        if(Array.isArray(liste)) return liste;
+      }
+      erreurs.push("allorigins: contenu vide");
+    } else {
+      erreurs.push(`allorigins: HTTP ${rGet.status}`);
+    }
+  } catch(e){ erreurs.push("allorigins: " + e.message); }
+
+  // 3. Fallback direct (OpenSky)
   const deg = RAYON_KM / 111.32;
   const lamin = (pos.lat - deg).toFixed(4);
   const lamax = (pos.lat + deg).toFixed(4);
   const lomin = (pos.lon - deg).toFixed(4);
   const lomax = (pos.lon + deg).toFixed(4);
-  const urlOpenSky = `https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
-
-  try{
-    const r = await fetchT(urlOpenSky, null, 7000);
-    if(r.ok){
-      const data = await r.json();
+  try {
+    const rOpenSky = await fetchT(`https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`, null, 6000);
+    if(rOpenSky.ok){
+      const data = await rOpenSky.json();
       if(Array.isArray(data.states)){
         return data.states.map(s => ({
           hex: s[0],
@@ -160,41 +189,10 @@ async function chercherAvions(pos){
         }));
       }
     }
-    erreurs.push(`opensky : HTTP ${r.status}`);
-  }catch(e){
-    erreurs.push(`opensky : ${e.message}`);
-  }
+    erreurs.push(`opensky: HTTP ${rOpenSky.status}`);
+  } catch(e){ erreurs.push("opensky: " + e.message); }
 
-  // 2. Relais AllOrigins (gère le format text/json correctement)
-  const rMn = Math.round(RAYON_KM / 1.852);
-  const targetLive = `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${rMn}`;
-  try{
-    const r = await fetchT(`https://api.allorigins.win/get?url=${encodeURIComponent(targetLive)}`, null, 8000);
-    if(r.ok){
-      const wrapper = await r.json();
-      const brut = typeof wrapper.contents === "string" ? JSON.parse(wrapper.contents) : wrapper.contents;
-      const liste = brut.ac || brut.aircraft;
-      if(Array.isArray(liste)) return liste;
-    }
-    erreurs.push(`allorigins : HTTP ${r.status}`);
-  }catch(e){
-    erreurs.push(`allorigins : ${e.message}`);
-  }
-
-  // 3. Appel direct airplanes.live (au cas où le réseau mobile autorise le cross-origin)
-  try{
-    const r = await fetchT(targetLive, null, 6000);
-    if(r.ok){
-      const j = await r.json();
-      const liste = j.ac || j.aircraft;
-      if(Array.isArray(liste)) return liste;
-    }
-    erreurs.push(`direct : HTTP ${r.status}`);
-  }catch(e){
-    erreurs.push(`direct : ${e.message}`);
-  }
-
-  throw new Error(erreurs.join(" | ") + ` | position : ${pos.lat}, ${pos.lon}`);
+  throw new Error(erreurs.join(" | ") + ` | pos: ${pos.lat}, ${pos.lon}`);
 }
 
 async function chercherPhoto(hex){
