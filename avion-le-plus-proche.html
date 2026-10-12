@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avion le plus proche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0d1424; --sky:#1b2747; --line:#2c3b63; --sign:#ffd23f; --cloud:#e8eef7; --slate:#8fa1c2;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 700px at 70% -10%, var(--sky), var(--ink) 70%) fixed;
+  color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:20px;
+}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:100%}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{font-family:'Barlow Condensed',sans-serif;font-weight:500;font-size:20px;color:var(--slate);letter-spacing:.04em}
+#status{font-size:14px;color:var(--slate)}
+button{font:inherit;color:var(--cloud);background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-offset:2px}
+
+main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
+@media (max-width:760px){main{grid-template-columns:1fr}}
+
+.left{display:flex;flex-direction:column;gap:16px}
+.photo{aspect-ratio:3/2;border-radius:14px;background:var(--sky) center/cover no-repeat;border:1px solid var(--line);display:flex;align-items:flex-end;position:relative;overflow:hidden}
+.photo .credit{position:absolute;right:8px;bottom:6px;font-size:11px;color:#fff;background:#0009;padding:2px 6px;border-radius:4px}
+.photo .nophoto{margin:auto;color:var(--slate);font-size:15px;text-align:center;padding:20px}
+
+.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(56px,10vw,104px);line-height:.95;color:var(--sign)}
+.model{font-size:20px;color:var(--cloud)}
+.route{font-family:'Barlow Condensed',sans-serif;font-weight:500;font-size:clamp(26px,4vw,38px);margin-top:4px}
+.route small{display:block;font-family:Barlow,sans-serif;font-size:14px;color:var(--slate);font-weight:400}
+
+.right{display:flex;flex-direction:column;gap:16px}
+.dial{position:relative;aspect-ratio:1;width:100%;max-width:340px;margin:0 auto}
+.dial svg{width:100%;height:100%}
+#plane{transform-origin:150px 150px;transition:transform .8s ease}
+.dial .heading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.dial .heading b{font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:700;color:var(--cloud)}
+.dial .heading span{font-size:14px;color:var(--slate)}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line)}
+.stat{padding:14px 4px;border-bottom:1px solid var(--line)}
+.stat:nth-child(odd){border-right:1px solid var(--line);padding-right:14px}
+.stat:nth-child(even){padding-left:16px}
+.stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:40px;line-height:1}
+.stat .v i{font-style:normal;font-size:18px;font-weight:500;color:var(--slate);margin-left:4px}
+.stat .l{font-size:14px;color:var(--slate);margin-top:4px}
+
+.empty{text-align:center;padding:60px 10px;color:var(--slate);font-size:20px}
+.settings{border:1px solid var(--line);border-radius:12px;padding:16px;display:none;gap:12px;flex-wrap:wrap;align-items:end;background:#0d142488}
+.settings.open{display:flex}
+.settings label{display:flex;flex-direction:column;font-size:14px;color:var(--slate);gap:4px}
+.settings input{font:inherit;color:var(--cloud);background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;width:170px}
+.settings .hint{flex-basis:100%;font-size:13px;color:var(--slate)}
+.settings .go{background:var(--sign);color:var(--ink);border-color:var(--sign);font-weight:500}
+@media (prefers-reduced-motion:reduce){#plane{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AVION LE PLUS PROCHE</h1>
+    <div style="display:flex;gap:12px;align-items:center"><span id="status">Démarrage…</span><button id="cfg" type="button">Ma position</button></div>
+  </header>
+
+  <section class="settings" id="settings">
+    <label>Latitude<input id="lat" inputmode="decimal" placeholder="ex. 48.8566"></label>
+    <label>Longitude<input id="lon" inputmode="decimal" placeholder="ex. 2.3522"></label>
+    <button class="go" id="save" type="button">Enregistrer</button>
+    <p class="hint">Astuce : dans Google Maps, appuie longtemps sur ta maison. Les deux nombres qui s'affichent en haut sont ta latitude et ta longitude.</p>
+  </section>
+
+  <div id="content"></div>
+</div>
+
+<script>
+/* ===== Réglages ===== */
+const RAYON_MN = 100;          // rayon de recherche en milles nautiques (~185 km)
+const RAFRAICHIR_SEC = 10;     // mise à jour toutes les 10 secondes
+const API = [
+  "https://api.adsb.lol/v2/point/",
+  "https://api.airplanes.live/v2/point/"
+];
+
+/* ===== Position enregistrée ===== */
+function lirePos(){
+  try{
+    const p = JSON.parse(localStorage.getItem("pos")||"null");
+    if(p && isFinite(p.lat) && isFinite(p.lon)) return p;
+  }catch(e){}
+  return window.__pos || null;
+}
+function ecrirePos(p){
+  window.__pos = p;
+  try{ localStorage.setItem("pos", JSON.stringify(p)); }catch(e){}
+}
+
+const $ = id => document.getElementById(id);
+const content = $("content"), statusEl = $("status");
+let lastCallsign = null, photoCache = {}, routeCache = {};
+
+$("cfg").onclick = () => $("settings").classList.toggle("open");
+$("save").onclick = () => {
+  const lat = parseFloat($("lat").value.replace(",","."));
+  const lon = parseFloat($("lon").value.replace(",","."));
+  if(!isFinite(lat) || !isFinite(lon) || Math.abs(lat)>90 || Math.abs(lon)>180){
+    statusEl.textContent = "Coordonnées invalides"; return;
+  }
+  ecrirePos({lat,lon});
+  $("settings").classList.remove("open");
+  tick();
+};
+
+/* ===== Utilitaires ===== */
+const POINTS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
+const nomCap = d => POINTS[Math.round(d/22.5)%16];
+const arrondi = n => Math.round(n).toLocaleString("fr-FR");
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function distanceKm(lat1,lon1,lat2,lon2){
+  const R=6371, r=Math.PI/180;
+  const a=Math.sin((lat2-lat1)*r/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin((lon2-lon1)*r/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+/* ===== Récupération des avions ===== */
+async function chercherAvions(pos){
+  const erreurs = [];
+  const essais = [];
+  for(const base of API){
+    essais.push({nom: base.split("/")[2], url: `${base}${pos.lat}/${pos.lon}/${RAYON_MN}`});
+  }
+  /* Secours : passer par un relais public qui ajoute l'autorisation manquante */
+  for(const base of API){
+    const u = `${base}${pos.lat}/${pos.lon}/${RAYON_MN}`;
+    essais.push({nom: "relais+"+base.split("/")[2], url: "https://corsproxy.io/?url="+encodeURIComponent(u)});
+  }
+  for(const e1 of essais){
+    try{
+      const r = await fetch(e1.url);
+      if(!r.ok){ erreurs.push(e1.nom+" : code "+r.status); continue; }
+      const j = await r.json();
+      return j.ac || j.aircraft || [];
+    }catch(e){ erreurs.push(e1.nom+" : "+e.message); }
+  }
+  throw new Error(erreurs.join(" | ") + " | position : " + pos.lat + ", " + pos.lon);
+}
+
+async function chercherPhoto(hex){
+  if(!hex) return null;
+  if(hex in photoCache) return photoCache[hex];
+  try{
+    const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${hex}`);
+    const j = await r.json();
+    const p = j.photos && j.photos[0];
+    photoCache[hex] = p ? {src:p.thumbnail_large.src, credit:p.photographer} : null;
+  }catch(e){ photoCache[hex] = null; }
+  return photoCache[hex];
+}
+
+async function chercherRoute(callsign, lat, lon){
+  if(!callsign) return null;
+  if(callsign in routeCache) return routeCache[callsign];
+  try{
+    const r = await fetch("https://api.adsb.lol/api/0/routeset",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({planes:[{callsign, lat, lng:lon}]})
+    });
+    const j = await r.json();
+    const x = Array.isArray(j) ? j[0] : null;
+    if(x && Array.isArray(x._airports) && x._airports.length>=2){
+      const a = x._airports, o = a[0], d = a[a.length-1];
+      routeCache[callsign] = {
+        de: o.location || o.name, deCode: o.iata || o.icao,
+        vers: d.location || d.name, versCode: d.iata || d.icao
+      };
+    } else routeCache[callsign] = null;
+  }catch(e){ routeCache[callsign] = null; }
+  return routeCache[callsign];
+}
+
+/* ===== Affichage ===== */
+const AVION_SVG = `<path d="M150 62 C156 62 159 72 159 86 L159 128 L222 166 L222 180 L159 160 L159 214 L182 232 L182 244 L150 236 L118 244 L118 232 L141 214 L141 160 L78 180 L78 166 L141 128 L141 86 C141 72 144 62 150 62Z" fill="#ffd23f"/>`;
+
+function dessiner(ac, dist, photo, route){
+  const cap = ac.track ?? ac.true_heading ?? ac.mag_heading;
+  const hasCap = typeof cap === "number";
+  const alt = ac.alt_baro;
+  const auSol = alt === "ground";
+  const altM = (typeof alt === "number") ? alt*0.3048 : null;
+  const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
+  const nom = (ac.flight||"").trim() || ac.r || ac.hex || "Inconnu";
+  const modele = ac.desc || ac.t || "Modèle inconnu";
+  const immat = ac.r ? ` — ${esc(ac.r)}` : "";
+
+  const photoHtml = photo
+    ? `<div class="photo" style="background-image:url('${esc(photo.src)}')"><span class="credit">Photo : ${esc(photo.credit)}</span></div>`
+    : `<div class="photo"><div class="nophoto">Pas de photo disponible pour cet avion</div></div>`;
+
+  const routeHtml = route
+    ? `<div class="route">${esc(route.de)} (${esc(route.deCode)}) → ${esc(route.vers)} (${esc(route.versCode)})<small>Provenance → destination</small></div>`
+    : `<div class="route">Trajet inconnu<small>Vols privés ou militaires : pas de plan de vol public</small></div>`;
+
+  content.innerHTML = `
+  <main>
+    <div class="left">
+      ${photoHtml}
+      <div>
+        <div class="callsign">${esc(nom)}</div>
+        <div class="model">${esc(modele)}${immat}</div>
+        ${routeHtml}
+      </div>
+    </div>
+    <div class="right">
+      <div class="dial" aria-label="Direction de l'avion">
+        <svg viewBox="0 0 300 300">
+          <circle cx="150" cy="150" r="140" fill="none" stroke="#2c3b63" stroke-width="2"/>
+          <circle cx="150" cy="150" r="100" fill="none" stroke="#2c3b63" stroke-width="1" stroke-dasharray="3 6"/>
+          <g fill="#8fa1c2" font-family="Barlow Condensed,sans-serif" font-size="20" text-anchor="middle">
+            <text x="150" y="26">N</text><text x="283" y="157">E</text><text x="150" y="286">S</text><text x="17" y="157">O</text>
+          </g>
+          <g id="plane" style="transform:rotate(${hasCap?cap:0}deg)" opacity="${hasCap?1:.25}">${AVION_SVG}</g>
+        </svg>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v">${hasCap?Math.round(cap)+"°":"—"}<i>${hasCap?nomCap(cap):""}</i></div><div class="l">Direction</div></div>
+        <div class="stat"><div class="v">${auSol?"Au sol":(altM!==null?arrondi(altM):"—")}<i>${altM!==null?"m":""}</i></div><div class="l">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
+        <div class="stat"><div class="v">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
+        <div class="stat"><div class="v">${dist.toFixed(1).replace(".",",")}<i>km</i></div><div class="l">Distance de chez toi</div></div>
+      </div>
+    </div>
+  </main>`;
+}
+
+/* ===== Boucle principale ===== */
+let enCours = false;
+async function tick(){
+  if(enCours) return; enCours = true;
+  const pos = lirePos();
+  if(!pos){
+    $("settings").classList.add("open");
+    content.innerHTML = `<div class="empty">Entre ta latitude et ta longitude pour commencer.</div>`;
+    statusEl.textContent = "Position manquante";
+    enCours = false; return;
+  }
+  $("lat").value = pos.lat; $("lon").value = pos.lon;
+  try{
+    statusEl.textContent = "Recherche…";
+    const liste = (await chercherAvions(pos)).filter(a => typeof a.lat==="number" && typeof a.lon==="number");
+    if(!liste.length){
+      content.innerHTML = `<div class="empty">Aucun avion dans un rayon de ${Math.round(RAYON_MN*1.852)} km pour le moment.</div>`;
+      statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
+      enCours = false; return;
+    }
+    liste.forEach(a => a._d = distanceKm(pos.lat,pos.lon,a.lat,a.lon));
+    liste.sort((a,b)=>a._d-b._d);
+    const ac = liste[0];
+    const [photo, route] = await Promise.all([
+      chercherPhoto(ac.hex),
+      chercherRoute((ac.flight||"").trim(), ac.lat, ac.lon)
+    ]);
+    dessiner(ac, ac._d, photo, route);
+    statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
+  }catch(e){
+    statusEl.textContent = "Pas de connexion aux données, nouvel essai…";
+    if(!document.getElementById("err")){
+      content.innerHTML = '<div class="empty" id="err"></div>';
+    }
+    const box = document.getElementById("err");
+    if(box) box.textContent = "Détail : " + e.message;
+  }
+  enCours = false;
+}
+tick();
+setInterval(tick, RAFRAICHIR_SEC*1000);
+</script>
+</body>
+</html>
