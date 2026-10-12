@@ -127,30 +127,62 @@ function distanceKm(lat1,lon1,lat2,lon2){
 
 function fetchT(url, opts, ms){
   const c = new AbortController();
-  const t = setTimeout(()=>c.abort(), ms || 9000);
+  const t = setTimeout(()=>c.abort(), ms || 6000);
   return fetch(url, Object.assign({}, opts||{}, {signal:c.signal})).finally(()=>clearTimeout(t));
 }
 
-/* ===== Récupération des avions (Requêtes simultanées) ===== */
+/* ===== Appel JSONP (contourne 100% des erreurs CORS du navigateur) ===== */
+function jsonpFR24(url, ms = 7000){
+  return new Promise((resolve, reject) => {
+    const cbName = "fr24_cb_" + Math.random().toString(36).substring(2, 9);
+    const script = document.createElement("script");
+    let timer = null;
+
+    window[cbName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup(){
+      if(timer) clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Délai dépassé (JSONP FR24)"));
+    }, ms);
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Erreur de chargement du script FR24"));
+    };
+
+    const separator = url.includes("?") ? "&" : "?";
+    script.src = `${url}${separator}callback=${cbName}`;
+    document.head.appendChild(script);
+  });
+}
+
+/* ===== Récupération des avions ===== */
 async function chercherAvions(pos){
   const deg = RAYON_KM / 111.32;
   const lamin = (pos.lat - deg).toFixed(4);
   const lamax = (pos.lat + deg).toFixed(4);
   const lomin = (pos.lon - deg).toFixed(4);
   const lomax = (pos.lon + deg).toFixed(4);
-  const rMn = Math.round(RAYON_KM / 1.852);
 
-  // Fournisseur 1 : Flightradar24 public zone feed
-  const appelFR24 = async () => {
-    const url = `https://data-cloud.flightradar24.com/zones/fcgi/feed.js?bounds=${lamax},${lamin},${lomin},${lomax}&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
-    const r = await fetchT(url, null, 7000);
-    if(!r.ok) throw new Error("FR24 HTTP " + r.status);
-    const j = await r.json();
+  // Requête vers Flightradar24 via injection de script JSONP (insensible aux blocages CORS)
+  const urlFR24 = `https://data-cloud.flightradar24.com/zones/fcgi/feed.js?bounds=${lamax},${lamin},${lomin},${lomax}&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
+
+  try {
+    const j = await jsonpFR24(urlFR24);
     const liste = [];
     for(const key of Object.keys(j)){
       if(["full_count", "version", "stats"].includes(key)) continue;
       const d = j[key];
-      if(Array.isArray(d)){
+      if(Array.isArray(d) && typeof d[1] === "number" && typeof d[2] === "number"){
         liste.push({
           hex: d[0],
           lat: d[1],
@@ -160,39 +192,15 @@ async function chercherAvions(pos){
           gs: d[5],
           t: d[8],
           r: d[9],
+          origin: d[11],
+          dest: d[12],
           flight: (d[16] || d[13] || "").trim()
         });
       }
     }
-    if(liste.length) return liste;
-    throw new Error("FR24 vide");
-  };
-
-  // Fournisseur 2 : Airplanes.live direct
-  const appelLive = async () => {
-    const r = await fetchT(`https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${rMn}`, null, 7000);
-    if(!r.ok) throw new Error("Airplanes.live HTTP " + r.status);
-    const j = await r.json();
-    const list = j.ac || j.aircraft;
-    if(Array.isArray(list) && list.length) return list;
-    throw new Error("Live vide");
-  };
-
-  // Fournisseur 3 : ADSB.one direct
-  const appelOne = async () => {
-    const r = await fetchT(`https://api.adsb.one/v2/point/${pos.lat}/${pos.lon}/${rMn}`, null, 7000);
-    if(!r.ok) throw new Error("ADSB.one HTTP " + r.status);
-    const j = await r.json();
-    const list = j.ac || j.aircraft;
-    if(Array.isArray(list) && list.length) return list;
-    throw new Error("One vide");
-  };
-
-  // Le premier qui répond sans erreur l'emporte immédiatement
-  try {
-    return await Promise.any([appelFR24(), appelLive(), appelOne()]);
+    return liste;
   } catch(e) {
-    throw new Error("Toutes les sources sont bloquées. Pense à désactiver le bouclier Brave (tête de lion en haut) sur ce site.");
+    throw new Error("FR24 : " + e.message);
   }
 }
 
@@ -208,48 +216,27 @@ async function chercherPhoto(hex){
   return photoCache[hex];
 }
 
-async function chercherRoute(callsign, lat, lon){
-  if(!callsign) return null;
-  if(callsign in routeCache) return routeCache[callsign];
-  try{
-    const r = await fetchT("https://api.adsb.lol/api/0/routeset",{
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({planes:[{callsign, lat, lng:lon}]})
-    }, 4000);
-    const j = await r.json();
-    const x = Array.isArray(j) ? j[0] : null;
-    if(x && Array.isArray(x._airports) && x._airports.length>=2){
-      const a = x._airports, o = a[0], d = a[a.length-1];
-      routeCache[callsign] = {
-        de: o.location || o.name, deCode: o.iata || o.icao,
-        vers: d.location || d.name, versCode: d.iata || d.icao
-      };
-    } else routeCache[callsign] = null;
-  }catch(e){ routeCache[callsign] = null; }
-  return routeCache[callsign];
-}
-
 /* ===== Affichage ===== */
 const AVION_SVG = `<path d="M150 62 C156 62 159 72 159 86 L159 128 L222 166 L222 180 L159 160 L159 214 L182 232 L182 244 L150 236 L118 244 L118 232 L141 214 L141 160 L78 180 L78 166 L141 128 L141 86 C141 72 144 62 150 62Z" fill="#ffd23f"/>`;
 
-function dessiner(ac, dist, photo, route){
-  const cap = ac.track ?? ac.true_heading ?? ac.mag_heading;
+function dessiner(ac, dist, photo){
+  const cap = ac.track;
   const hasCap = typeof cap === "number";
   const alt = ac.alt_baro;
   const auSol = alt === "ground" || alt === 0;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
   const nom = (ac.flight||"").trim() || ac.r || ac.hex || "Inconnu";
-  const modele = ac.desc || ac.t || "Modèle non renseigné";
+  const modele = ac.t || "Modèle non renseigné";
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
 
   const photoHtml = photo
     ? `<div class="photo" style="background-image:url('${esc(photo.src)}')"><span class="credit">Photo : ${esc(photo.credit)}</span></div>`
     : `<div class="photo"><div class="nophoto">Pas de photo disponible pour cet avion</div></div>`;
 
-  const routeHtml = route
-    ? `<div class="route">${esc(route.de)} (${esc(route.deCode)}) → ${esc(route.vers)} (${esc(route.versCode)})<small>Provenance → destination</small></div>`
-    : `<div class="route">Trajet non disponible<small>Plan de vol absent ou privé</small></div>`;
+  const routeHtml = (ac.origin || ac.dest)
+    ? `<div class="route">${esc(ac.origin || "—")} → ${esc(ac.dest || "—")}<small>Provenance → destination (codes IATA)</small></div>`
+    : `<div class="route">Trajet non disponible<small>Plan de vol absent ou non public</small></div>`;
 
   content.innerHTML = `
   <main>
@@ -296,14 +283,7 @@ async function tick(){
   $("lat").value = pos.lat; $("lon").value = pos.lon;
   try{
     statusEl.textContent = "Recherche…";
-    const avionsBruts = await chercherAvions(pos);
-    const liste = avionsBruts
-      .map(a => ({
-        ...a,
-        lat: parseFloat(a.lat ?? a.lastPosition?.lat),
-        lon: parseFloat(a.lon ?? a.lastPosition?.lon)
-      }))
-      .filter(a => Number.isFinite(a.lat) && Number.isFinite(a.lon));
+    const liste = await chercherAvions(pos);
 
     if(!liste.length){
       content.innerHTML = `<div class="empty">Aucun avion détecté dans un rayon de ${RAYON_KM} km pour le moment.</div>`;
@@ -313,11 +293,8 @@ async function tick(){
     liste.forEach(a => a._d = distanceKm(pos.lat,pos.lon,a.lat,a.lon));
     liste.sort((a,b)=>a._d-b._d);
     const ac = liste[0];
-    const [photo, route] = await Promise.all([
-      chercherPhoto(ac.hex),
-      chercherRoute((ac.flight||"").trim(), ac.lat, ac.lon)
-    ]);
-    dessiner(ac, ac._d, photo, route);
+    const photo = await chercherPhoto(ac.hex);
+    dessiner(ac, ac._d, photo);
     statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
   }catch(e){
     statusEl.textContent = "Pas de connexion aux données, nouvel essai…";
