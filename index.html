@@ -73,7 +73,7 @@ main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
     <label>Latitude<input id="lat" inputmode="decimal" placeholder="ex. 48.8566"></label>
     <label>Longitude<input id="lon" inputmode="decimal" placeholder="ex. 2.3522"></label>
     <button class="go" id="save" type="button">Enregistrer</button>
-    <p class="hint">Astuce : dans Google Maps, appuie longtemps sur ta maison. Les deux nombres qui s'affichent en haut sont ta latitude et ta longitude.</p>
+    <p class="hint">Astuce : dans Google Maps, appuie longtemps sur ta position. Les deux nombres qui s'affichent sont la latitude et la longitude.</p>
   </section>
 
   <div id="content"></div>
@@ -134,63 +134,50 @@ function fetchT(url, opts, ms){
 
 async function chercherAvions(pos){
   const erreurs = [];
-  
-  // 1. Essai direct sur les API ADSB principales
-  const sourcesDirectes = [
-    { nom: "adsb.lol", url: `https://api.adsb.lol/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}` },
-    { nom: "airplanes.live", url: `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}` }
-  ];
-
-  for(const src of sourcesDirectes){
-    try {
-      const r = await fetchT(src.url, null, 8000);
-      if(r.ok){
-        const j = await r.json();
-        return j.ac || j.aircraft || [];
-      }
-      erreurs.push(`${src.nom} : HTTP ${r.status}`);
-    } catch(e){ erreurs.push(`${src.nom} : ${e.message}`); }
-  }
-
-  // 2. Secours via relais CORS
   const targetUrl = `https://api.airplanes.live/v2/point/${pos.lat}/${pos.lon}/${RAYON_MN}`;
-  const proxys = [
-    { nom: "corsproxy", url: `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}` },
-    { nom: "allorigins", url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` }
+
+  // 1. Essai direct (fonctionne si l'API autorise le CORS sur l'IP/réseau en cours)
+  try {
+    const r = await fetchT(targetUrl, null, 6000);
+    if(r.ok){
+      const j = await r.json();
+      return j.ac || j.aircraft || [];
+    }
+    erreurs.push(`direct : HTTP ${r.status}`);
+  } catch(e){ erreurs.push("direct : " + e.message); }
+
+  // 2. Proxys CORS fiables et gratuits (sans clé d'API)
+  const relaiConfigs = [
+    {
+      nom: "allorigins-json",
+      url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+      extraire: j => JSON.parse(j.contents)
+    },
+    {
+      nom: "codetabs",
+      url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(targetUrl)}`,
+      extraire: j => j
+    },
+    {
+      nom: "thingproxy",
+      url: `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
+      extraire: j => j
+    }
   ];
 
-  for(const px of proxys){
+  for(const cfg of relaiConfigs){
     try {
-      const r = await fetchT(px.url, null, 10000);
+      const r = await fetchT(cfg.url, null, 8000);
       if(r.ok){
-        const j = await r.json();
-        return j.ac || j.aircraft || [];
+        const brut = await r.json();
+        const data = cfg.extraire(brut);
+        if(data && (data.ac || data.aircraft)){
+          return data.ac || data.aircraft || [];
+        }
       }
-      erreurs.push(`${px.nom} : HTTP ${r.status}`);
-    } catch(e){ erreurs.push(`${px.nom} : ${e.message}`); }
+      erreurs.push(`${cfg.nom} : HTTP ${r.status}`);
+    } catch(e){ erreurs.push(`${cfg.nom} : ${e.message}`); }
   }
-
-  // 3. Dernier recours : OpenSky Network
-  try {
-    const delta = 0.8; // zone d'environ 90 km autour du point
-    const rOpenSky = await fetchT(
-      `https://opensky-network.org/api/states/all?lamin=${pos.lat - delta}&lomin=${pos.lon - delta}&lamax=${pos.lat + delta}&lomax=${pos.lon + delta}`,
-      null,
-      9000
-    );
-    if(rOpenSky.ok){
-      const j = await rOpenSky.json();
-      return (j.states || []).map(s => ({
-        hex: s[0],
-        flight: (s[1] || "").trim(),
-        lon: s[5],
-        lat: s[6],
-        alt_baro: s[7] ? Math.round(s[7] * 3.28084) : null,
-        gs: s[9] ? Math.round(s[9] * 1.94384) : null,
-        track: s[10]
-      }));
-    }
-  } catch(e){ erreurs.push("opensky : " + e.message); }
 
   throw new Error(erreurs.join(" | ") + ` | position : ${pos.lat}, ${pos.lon}`);
 }
