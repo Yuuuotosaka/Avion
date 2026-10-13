@@ -148,13 +148,14 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 
 <script>
 /* ===== Réglages ===== */
-const RAYON_KM = 90;
+const RAYON_SCAN_KM = 90;
 const RAFRAICHIR_SEC = 5;
 
 /* ===== État global & Interpolation ===== */
 const trajectoireHistory = {};
 let currentPlane = null;
 let currentPos = null;
+let currentRadarMaxKm = 30; // Rayon max affiché sur le radar (adaptatif)
 
 /* ===== Base locale d'aéroports ===== */
 const AIRPORTS = {
@@ -340,11 +341,12 @@ function gisement(lat1,lon1,lat2,lon2){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
-function projeterSurRadar(posUser, latAvion, lonAvion){
+/* Projection coordonnées GPS -> pixels du radar (adaptée au rayon du zoom) */
+function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
-  const rPixelMax = 120;
-  const distRatio = Math.min(dist / RAYON_KM, 1.25);
+  const rPixelMax = 120; // Le cercle extérieur fait 120 px de rayon
+  const distRatio = Math.min(dist / maxKm, 1.15);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
   return {
@@ -352,6 +354,14 @@ function projeterSurRadar(posUser, latAvion, lonAvion){
     y: 150 + rPixel * Math.sin(angleRad),
     dist
   };
+}
+
+/* Calcul du zoom optimal selon la distance réelle */
+function calculerEchelleRadar(dist){
+  if(dist <= 15) return 18;  // Très proche : zoom max (repères à 6 et 12 km)
+  if(dist <= 30) return 36;  // Proche : zoom moyen (repères à 12 et 24 km)
+  if(dist <= 55) return 60;  // Moyen : (repères à 20 et 40 km)
+  return 90;                 // Loin : grand angle (repères à 30 et 60 km)
 }
 
 /* ===== Appel JSONP FR24 ===== */
@@ -375,7 +385,7 @@ function jsonpFR24(url, ms = 7000){
 }
 
 async function chercherAvions(pos){
-  const deg = RAYON_KM / 111.32;
+  const deg = RAYON_SCAN_KM / 111.32;
   const lamin = (pos.lat - deg).toFixed(4);
   const lamax = (pos.lat + deg).toFixed(4);
   const lomin = (pos.lon - deg).toFixed(4);
@@ -482,12 +492,15 @@ function genererSvgAvion(t){
   `;
 }
 
-/* ===== Mini-Carte Radar Tactique ===== */
-function genererStructureRadar(){
+/* ===== Mini-Carte Radar Tactique (Structure & Grille adaptative) ===== */
+function genererStructureRadar(maxKm){
+  const tier1 = Math.round(maxKm / 3);
+  const tier2 = Math.round((maxKm * 2) / 3);
+
   return `
     <div class="radar-box" aria-label="Carte radar de position relative">
       <svg viewBox="0 0 300 300">
-        <!-- Cercles de portée : 30 km, 60 km, 90 km -->
+        <!-- Cercles de portée dynamiques selon le zoom -->
         <circle cx="150" cy="150" r="40" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="80" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.5"/>
@@ -497,8 +510,9 @@ function genererStructureRadar(){
         <line x1="14" y1="150" x2="286" y2="150" stroke="#253557" stroke-width="1" opacity="0.5"/>
         <g fill="#8fa1c2" font-family="JetBrains Mono" font-size="10" text-anchor="middle">
           <text x="150" y="24">N</text><text x="282" y="153">E</text><text x="150" y="282">S</text><text x="18" y="153">O</text>
-          <text x="150" y="106" fill="#8fa1c2" opacity="0.6">30 km</text>
-          <text x="150" y="66" fill="#8fa1c2" opacity="0.6">60 km</text>
+          <text id="radar-lbl-1" x="150" y="106" fill="#8fa1c2" opacity="0.6">${tier1} km</text>
+          <text id="radar-lbl-2" x="150" y="66" fill="#8fa1c2" opacity="0.6">${tier2} km</text>
+          <text id="radar-lbl-3" x="150" y="26" fill="#ffd23f" opacity="0.75" font-size="9">${maxKm} km</text>
         </g>
 
         <!-- Position utilisateur (Maison) -->
@@ -513,7 +527,7 @@ function genererStructureRadar(){
 }
 
 /* ===== Affichage Complet (Structure DOM) ===== */
-function dessiner(ac, pos){
+function dessiner(ac, pos, dist){
   const cap = ac.track;
   const hasCap = typeof cap === "number";
   const alt = ac.alt_baro;
@@ -524,8 +538,10 @@ function dessiner(ac, pos){
   const modele = ac.t || "Modèle non renseigné";
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
 
+  currentRadarMaxKm = calculerEchelleRadar(dist);
+
   const drawingHtml = genererSvgAvion(ac.t);
-  const radarHtml = genererStructureRadar();
+  const radarHtml = genererStructureRadar(currentRadarMaxKm);
 
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
@@ -566,7 +582,7 @@ function dessiner(ac, pos){
   </main>`;
 }
 
-/* ===== Boucle d'animation à 60 FPS (Dead Reckoning) ===== */
+/* ===== Boucle d'animation à 60 FPS (Dead Reckoning + Zoom Dynamique) ===== */
 function animer(){
   requestAnimationFrame(animer);
   if(!currentPlane || !currentPos) return;
@@ -575,14 +591,13 @@ function animer(){
   if(!layer) return;
 
   const now = performance.now();
-  const dt = (now - currentPlane.lastUpdate) / 1000; // secondes écoulées
+  const dt = (now - currentPlane.lastUpdate) / 1000;
 
-  // Dead Reckoning (navigation à l'estime)
+  // Calcul du déplacement continu (Dead Reckoning)
   const track = typeof currentPlane.track === "number" ? currentPlane.track : 0;
   const gsKmh = (typeof currentPlane.gs === "number" ? currentPlane.gs : 0) * 1.852;
   const distKmTraveled = (gsKmh / 3600) * dt;
 
-  // Calcul du déplacement en latitude / longitude
   const trackRad = track * (Math.PI / 180);
   const dLat = (distKmTraveled * Math.cos(trackRad)) / 110.574;
   const dLon = (distKmTraveled * Math.sin(trackRad)) / (111.320 * Math.cos(currentPlane.baseLat * Math.PI / 180));
@@ -590,8 +605,8 @@ function animer(){
   const liveLat = currentPlane.baseLat + dLat;
   const liveLon = currentPlane.baseLon + dLon;
 
-  // Projection sur le radar
-  const ptActuel = projeterSurRadar(currentPos, liveLat, liveLon);
+  // Projection selon l'échelle zoomée actuelle
+  const ptActuel = projeterSurRadar(currentPos, liveLat, liveLon, currentRadarMaxKm);
 
   // Mise à jour de la distance en direct
   const distEl = document.getElementById("live-distance");
@@ -599,10 +614,10 @@ function animer(){
     distEl.innerHTML = `${ptActuel.dist.toFixed(1).replace(".",",")}<i>km</i>`;
   }
 
-  // Historique et tracé
+  // Historique et tracé projetés
   const hex = currentPlane.hex;
   const hist = trajectoireHistory[hex] || [];
-  const pointsProj = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon));
+  const pointsProj = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon, currentRadarMaxKm));
   pointsProj.push(ptActuel);
 
   let traceSvg = "";
@@ -650,7 +665,7 @@ async function tick(){
 
     if(!liste.length){
       currentPlane = null;
-      content.innerHTML = `<div class="empty">Aucun avion détecté dans un rayon de ${RAYON_KM} km pour le moment.</div>`;
+      content.innerHTML = `<div class="empty">Aucun avion détecté dans un rayon de ${RAYON_SCAN_KM} km pour le moment.</div>`;
       statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
       enCours = false; return;
     }
@@ -659,7 +674,7 @@ async function tick(){
     liste.sort((a,b)=>a._d-b._d);
     const ac = liste[0];
 
-    // Mémoriser la trajectoire réseau certifiée
+    // Mémorisation de la trajectoire
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
     const lastPoint = hist[hist.length - 1];
@@ -668,8 +683,9 @@ async function tick(){
       if(hist.length > 50) hist.shift();
     }
 
-    // Changement d'avion ou premier affichage
     const planeChanged = !currentPlane || currentPlane.hex !== ac.hex;
+    const nouvelleEchelle = calculerEchelleRadar(ac._d);
+    const zoomChanged = nouvelleEchelle !== currentRadarMaxKm;
 
     currentPlane = {
       ...ac,
@@ -678,8 +694,9 @@ async function tick(){
       lastUpdate: performance.now()
     };
 
-    if(planeChanged){
-      dessiner(ac, pos);
+    // Redessiner uniquement si changement d'avion ou palier de zoom modifié
+    if(planeChanged || zoomChanged){
+      dessiner(ac, pos, ac._d);
     }
 
     statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
