@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flash-Éclair plane finder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#0b111e; --sky:#16223d; --line:#253557; --sign:#ffd23f; --cloud:#e8eef7; --slate:#8fa1c2; --cyan:#38bdf8;
@@ -97,6 +97,48 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
 }
 
 .left{display:flex;flex-direction:column;gap:16px}
+
+/* Bannière détection d'avion */
+.detection-banner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:linear-gradient(90deg, rgba(56,189,248,0.12), rgba(27,39,71,0.4));
+  border:1px solid rgba(56,189,248,0.28);
+  border-radius:10px;
+  padding:10px 14px;
+}
+.detection-banner .left-info{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.detection-banner .beacon{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan);
+  animation:beaconPulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes beaconPulse{
+  0%{ opacity:0.4; transform:scale(0.85); }
+  100%{ opacity:1; transform:scale(1.2); }
+}
+.detection-banner .text{
+  font-size:14px;
+  font-weight:500;
+  color:var(--cloud);
+  letter-spacing:.02em;
+}
+.detection-banner .distance-tag{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:18px;
+  font-weight:700;
+  color:var(--sign);
+  letter-spacing:.04em;
+}
 
 .plane-canvas{
   aspect-ratio:16/10;
@@ -323,7 +365,7 @@ let currentRadarMaxKm = 30;
 /* ===== Base étendue des modèles d'avions ===== */
 const MODEL_NAMES = {
   DR40: "Robin DR400", DR48: "Robin DR400 Regent", C172: "Cessna 172 Skyhawk", C182: "Cessna 182 Skylane",
-  C152: "Cessna 152", C150: "Cessna 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
+  C152: "Cessna 152", C150: "Cess0 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
   PA38: "Piper PA-38 Tomahawk", SR20: "Cirrus SR20", SR22: "Cirrus SR22", DA40: "Diamond DA40 Diamond Star",
   DA42: "Diamond DA42 Twin Star", DA62: "Diamond DA62", TB20: "SOCATA TB-20 Trinidad", TB10: "SOCATA TB-10 Tobago",
   AP22: "Aeroprakt A-22 Foxbat", AT72: "ATR 72-500/600", AT76: "ATR 72-600", AT75: "ATR 72-500",
@@ -813,11 +855,21 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       </div>
     </div>`;
 
+  const bannerHtml = `
+    <div class="detection-banner">
+      <div class="left-info">
+        <span class="beacon"></span>
+        <span class="text">Un avion a été détecté à proximité</span>
+      </div>
+      <div class="distance-tag" id="banner-distance">${dist.toFixed(1).replace(".",",")} km</div>
+    </div>`;
+
   const animClass = avecAnimationTransition ? "fade-in" : "";
 
   content.innerHTML = `
   <main class="${animClass}" id="main-container">
     <div class="left">
+      ${bannerHtml}
       ${drawingHtml}
       <div>
         <div class="callsign">${esc(nom)}</div>
@@ -864,6 +916,11 @@ function animer(){
   const distEl = document.getElementById("live-distance");
   if(distEl){
     distEl.innerHTML = `${ptActuel.dist.toFixed(1).replace(".",",")}<i>km</i>`;
+  }
+
+  const bannerDistEl = document.getElementById("banner-distance");
+  if(bannerDistEl){
+    bannerDistEl.textContent = `${ptActuel.dist.toFixed(1).replace(".",",")} km`;
   }
 
   const hex = currentPlane.hex;
@@ -967,7 +1024,6 @@ async function tick(){
     } else if(zoomChanged){
       dessiner(ac, pos, ac._d, false);
     } else {
-      // Mise à jour de l'ETA au rafraîchissement réseau
       const etaEl = document.getElementById("live-eta");
       if(etaEl){
         const eta = estimerHeureArrivee(ac);
