@@ -151,8 +151,18 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 const RAYON_SCAN_KM = 90;
 const RAFRAICHIR_SEC = 5;
 
-/* ===== État global & Interpolation ===== */
-const trajectoireHistory = {};
+/* ===== Mémorisation d'historique (avec localStorage pour persister après rechargement) ===== */
+let trajectoireHistory = {};
+try {
+  trajectoireHistory = JSON.parse(localStorage.getItem("traj_cache") || "{}");
+} catch(e){}
+
+function sauverHistorique(){
+  try {
+    localStorage.setItem("traj_cache", JSON.stringify(trajectoireHistory));
+  } catch(e){}
+}
+
 let currentPlane = null;
 let currentPos = null;
 let currentRadarMaxKm = 30;
@@ -332,7 +342,7 @@ function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
   const rPixelMax = 120;
-  const distRatio = Math.min(dist / maxKm, 1.15);
+  const distRatio = Math.min(dist / maxKm, 1.25);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
   return {
@@ -565,7 +575,7 @@ function dessiner(ac, pos, dist){
   </main>`;
 }
 
-/* ===== Boucle d'animation à 60 FPS (Tracé d'où il vient complet) ===== */
+/* ===== Boucle d'animation à 60 FPS (Tracé antérieur garanti) ===== */
 function animer(){
   requestAnimationFrame(animer);
   if(!currentPlane || !currentPos) return;
@@ -576,7 +586,7 @@ function animer(){
   const now = performance.now();
   const dt = (now - currentPlane.lastUpdate) / 1000;
 
-  // Navigation à l'estime en direct
+  // Calcul du déplacement en temps réel
   const track = typeof currentPlane.track === "number" ? currentPlane.track : 0;
   const gsKmh = (typeof currentPlane.gs === "number" ? currentPlane.gs : 0) * 1.852;
   const distKmTraveled = (gsKmh / 3600) * dt;
@@ -595,60 +605,44 @@ function animer(){
     distEl.innerHTML = `${ptActuel.dist.toFixed(1).replace(".",",")}<i>km</i>`;
   }
 
-  // 1. Récupération de l'historique enregistré
+  // 1. Récupération des points réels enregistrés pour cet appareil
   const hex = currentPlane.hex;
   const hist = trajectoireHistory[hex] || [];
   let pointsTrajet = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon, currentRadarMaxKm));
 
-  // 2. Si le tracé est trop court (ex: l'avion vient d'apparaître), on calcule la rétro-trajectoire d'où il arrive
-  if(pointsTrajet.length < 5){
-    const dep = AIRPORTS[(currentPlane.origin || "").toUpperCase()];
-    const retroPoints = [];
-    
-    if(dep && dep.lat && dep.lon){
-      // Reconstitution depuis l'aéroport de départ jusqu'à la position actuelle
-      const steps = 6;
-      for(let i = steps; i >= 1; i--){
-        const ratio = i / (steps + 1);
-        const rLat = liveLat + (dep.lat - liveLat) * ratio * 0.25;
-        const rLon = liveLon + (dep.lon - liveLon) * ratio * 0.25;
-        retroPoints.push(projeterSurRadar(currentPos, rLat, rLon, currentRadarMaxKm));
-      }
-    } else {
-      // Reconstitution linéaire arrière selon le cap sur 40 km
-      const steps = 5;
-      const retroKm = 40;
-      for(let i = steps; i >= 1; i--){
-        const distStep = (retroKm / steps) * i;
-        const rLat = liveLat - (distStep * Math.cos(trackRad)) / 110.574;
-        const rLon = liveLon - (distStep * Math.sin(trackRad)) / (111.320 * Math.cos(liveLat * Math.PI / 180));
-        retroPoints.push(projeterSurRadar(currentPos, rLat, rLon, currentRadarMaxKm));
-      }
-    }
-    pointsTrajet = [...retroPoints, ...pointsTrajet];
+  // 2. Reconstitution automatique en amont (Sillage garanti dès la 1ère seconde)
+  // On calcule des points en arrière sur le cap inverse jusqu'à sortir du bord du radar
+  const retroPoints = [];
+  const distanceArriereMaxKm = currentRadarMaxKm * 1.3; // couvre toute la largeur du radar
+  const nbEtapes = 8;
+  for(let i = nbEtapes; i >= 1; i--){
+    const distStep = (distanceArriereMaxKm / nbEtapes) * i;
+    const rLat = currentPlane.baseLat - (distStep * Math.cos(trackRad)) / 110.574;
+    const rLon = currentPlane.baseLon - (distStep * Math.sin(trackRad)) / (111.320 * Math.cos(currentPlane.baseLat * Math.PI / 180));
+    retroPoints.push(projeterSurRadar(currentPos, rLat, rLon, currentRadarMaxKm));
   }
 
-  // Ajouter la position courante en tête du tracé
-  pointsTrajet.push(ptActuel);
+  // On combine le sillage en amont avec les points réels et la position actuelle
+  const trajetComplet = [...retroPoints, ...pointsTrajet, ptActuel];
 
   // Construction du tracé SVG
-  const polylineCoords = pointsTrajet.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const pointsEtapes = pointsTrajet.slice(0, -1).map((p, idx) => {
-    const opac = (0.15 + (idx / pointsTrajet.length) * 0.6).toFixed(2);
+  const polylineCoords = trajetComplet.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const pointsEtapes = trajetComplet.slice(0, -1).map((p, idx) => {
+    const opac = (0.10 + (idx / trajetComplet.length) * 0.65).toFixed(2);
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
   }).join("");
 
-  // Ligne de projection future immédiate (en pointillé devant l'avion)
-  const futLen = 20;
+  // Trajectoire future anticipée (court vecteur en pointillé devant lui)
+  const futLen = 22;
   const futX = ptActuel.x + futLen * Math.sin(trackRad);
   const futY = ptActuel.y - futLen * Math.cos(trackRad);
 
   layer.innerHTML = `
-    <!-- Tracé complet d'où il arrive (Son passé) -->
-    <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
+    <!-- Tracé complet antérieur (depuis son entrée dans la zone radar) -->
+    <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
     ${pointsEtapes}
 
-    <!-- Trajectoire future anticipée (Son futur) -->
+    <!-- Trajectoire future anticipée -->
     <line x1="${ptActuel.x.toFixed(1)}" y1="${ptActuel.y.toFixed(1)}" x2="${futX.toFixed(1)}" y2="${futY.toFixed(1)}" 
           stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
 
@@ -690,13 +684,14 @@ async function tick(){
     liste.sort((a,b)=>a._d-b._d);
     const ac = liste[0];
 
-    // Mémorisation de l'historique réel
+    // Enregistrement continu dans l'historique persistent
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
     const lastPoint = hist[hist.length - 1];
     if(!lastPoint || (lastPoint.lat !== ac.lat || lastPoint.lon !== ac.lon)){
       hist.push({ lat: ac.lat, lon: ac.lon });
       if(hist.length > 50) hist.shift();
+      sauverHistorique();
     }
 
     const planeChanged = !currentPlane || currentPlane.hex !== ac.hex;
