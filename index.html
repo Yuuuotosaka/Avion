@@ -151,8 +151,10 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 const RAYON_KM = 90;
 const RAFRAICHIR_SEC = 5;
 
-/* ===== Historique de trajectoire ===== */
-const trajectoireHistory = {}; // { [hex]: [{lat, lon, t}] }
+/* ===== État global & Interpolation ===== */
+const trajectoireHistory = {};
+let currentPlane = null;
+let currentPos = null;
 
 /* ===== Base locale d'aéroports ===== */
 const AIRPORTS = {
@@ -269,6 +271,7 @@ function lirePos(){
 }
 function ecrirePos(p){
   window.__pos = p;
+  currentPos = p;
   try{ localStorage.setItem("pos", JSON.stringify(p)); }catch(e){}
 }
 
@@ -337,11 +340,10 @@ function gisement(lat1,lon1,lat2,lon2){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
-/* Projection coordonnées GPS -> pixels du radar (centre 150, 150) */
 function projeterSurRadar(posUser, latAvion, lonAvion){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
-  const rPixelMax = 120; // 90 km correspond au cercle de rayon 120 px
+  const rPixelMax = 120;
   const distRatio = Math.min(dist / RAYON_KM, 1.25);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
@@ -480,53 +482,8 @@ function genererSvgAvion(t){
   `;
 }
 
-/* ===== Mini-Carte Radar Tactique avec Tracé de Trajectoire ===== */
-function genererRadar(pos, ac, dist){
-  const hex = ac.hex;
-  const track = typeof ac.track === "number" ? ac.track : 0;
-
-  // 1. Mettre à jour l'historique des positions pour cet avion
-  if(!trajectoireHistory[hex]) trajectoireHistory[hex] = [];
-  const hist = trajectoireHistory[hex];
-  const lastPoint = hist[hist.length - 1];
-
-  // Ajouter si c'est le 1er point ou s'il s'est déplacé
-  if(!lastPoint || (lastPoint.lat !== ac.lat || lastPoint.lon !== ac.lon)){
-    hist.push({ lat: ac.lat, lon: ac.lon, t: Date.now() });
-    if(hist.length > 50) hist.shift();
-  }
-
-  // 2. Projeter tous les points de l'historique sur le radar
-  const pointsProj = hist.map(pt => projeterSurRadar(pos, pt.lat, pt.lon));
-  const ptActuel = pointsProj[pointsProj.length - 1];
-
-  // 3. Construction du tracé SVG
-  let traceSvg = "";
-
-  if(pointsProj.length >= 2){
-    const polylineCoords = pointsProj.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    const pointsEtapes = pointsProj.slice(0, -1).map((p, idx) => {
-      const opac = (0.2 + (idx / pointsProj.length) * 0.6).toFixed(2);
-      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
-    }).join("");
-
-    traceSvg = `
-      <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" stroke-dasharray="4 3"/>
-      ${pointsEtapes}
-    `;
-  } else {
-    const capRad = (track - 90) * (Math.PI / 180);
-    const trailLen = 35;
-    const startX = ptActuel.x - trailLen * Math.cos(capRad);
-    const startY = ptActuel.y - trailLen * Math.sin(capRad);
-
-    traceSvg = `
-      <line x1="${startX.toFixed(1)}" y1="${startY.toFixed(1)}" x2="${ptActuel.x.toFixed(1)}" y2="${ptActuel.y.toFixed(1)}" 
-            stroke="#ffd23f" stroke-width="2" stroke-dasharray="4 3" opacity="0.5"/>
-      <circle cx="${startX.toFixed(1)}" cy="${startY.toFixed(1)}" r="2" fill="#ffd23f" opacity="0.3"/>
-    `;
-  }
-
+/* ===== Mini-Carte Radar Tactique ===== */
+function genererStructureRadar(){
   return `
     <div class="radar-box" aria-label="Carte radar de position relative">
       <svg viewBox="0 0 300 300">
@@ -548,24 +505,15 @@ function genererRadar(pos, ac, dist){
         <circle cx="150" cy="150" r="4" fill="#38bdf8"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="#38bdf8" stroke-width="1" opacity="0.4"/>
 
-        <!-- TRACÉ DE LA TRAJECTOIRE -->
-        ${traceSvg}
-
-        <!-- Cible radar actuelle -->
-        <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
-          <line x1="0" y1="0" x2="0" y2="-18" stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 2" transform="rotate(${track})"/>
-          <g transform="rotate(${track})">
-            <path d="M0 -10 L6 5 L0 2 L-6 5 Z" fill="#ffd23f"/>
-          </g>
-          <circle cx="0" cy="0" r="13" fill="none" stroke="#ffd23f" stroke-width="1.2" opacity="0.5"/>
-        </g>
+        <!-- Conteneur dynamique du tracé et de l'avion -->
+        <g id="radar-dynamic-layer"></g>
       </svg>
     </div>
   `;
 }
 
-/* ===== Affichage Complet ===== */
-function dessiner(ac, dist, pos){
+/* ===== Affichage Complet (Structure DOM) ===== */
+function dessiner(ac, pos){
   const cap = ac.track;
   const hasCap = typeof cap === "number";
   const alt = ac.alt_baro;
@@ -577,7 +525,7 @@ function dessiner(ac, dist, pos){
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
 
   const drawingHtml = genererSvgAvion(ac.t);
-  const radarHtml = genererRadar(pos, ac, dist);
+  const radarHtml = genererStructureRadar();
 
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
@@ -612,13 +560,79 @@ function dessiner(ac, dist, pos){
         <div class="stat"><div class="v">${hasCap?Math.round(cap)+"°":"—"}<i>${hasCap?nomCap(cap):""}</i></div><div class="l">Cap magnétique</div></div>
         <div class="stat"><div class="v">${auSol?"Au sol":(altM!==null?arrondi(altM):"—")}<i>${altM!==null?"m":""}</i></div><div class="l">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
         <div class="stat"><div class="v">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
-        <div class="stat"><div class="v">${dist.toFixed(1).replace(".",",")}<i>km</i></div><div class="l">Distance de toi</div></div>
+        <div class="stat"><div class="v" id="live-distance">—<i>km</i></div><div class="l">Distance de toi</div></div>
       </div>
     </div>
   </main>`;
 }
 
-/* ===== Boucle principale ===== */
+/* ===== Boucle d'animation à 60 FPS (Dead Reckoning) ===== */
+function animer(){
+  requestAnimationFrame(animer);
+  if(!currentPlane || !currentPos) return;
+
+  const layer = document.getElementById("radar-dynamic-layer");
+  if(!layer) return;
+
+  const now = performance.now();
+  const dt = (now - currentPlane.lastUpdate) / 1000; // secondes écoulées
+
+  // Dead Reckoning (navigation à l'estime)
+  const track = typeof currentPlane.track === "number" ? currentPlane.track : 0;
+  const gsKmh = (typeof currentPlane.gs === "number" ? currentPlane.gs : 0) * 1.852;
+  const distKmTraveled = (gsKmh / 3600) * dt;
+
+  // Calcul du déplacement en latitude / longitude
+  const trackRad = track * (Math.PI / 180);
+  const dLat = (distKmTraveled * Math.cos(trackRad)) / 110.574;
+  const dLon = (distKmTraveled * Math.sin(trackRad)) / (111.320 * Math.cos(currentPlane.baseLat * Math.PI / 180));
+
+  const liveLat = currentPlane.baseLat + dLat;
+  const liveLon = currentPlane.baseLon + dLon;
+
+  // Projection sur le radar
+  const ptActuel = projeterSurRadar(currentPos, liveLat, liveLon);
+
+  // Mise à jour de la distance en direct
+  const distEl = document.getElementById("live-distance");
+  if(distEl){
+    distEl.innerHTML = `${ptActuel.dist.toFixed(1).replace(".",",")}<i>km</i>`;
+  }
+
+  // Historique et tracé
+  const hex = currentPlane.hex;
+  const hist = trajectoireHistory[hex] || [];
+  const pointsProj = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon));
+  pointsProj.push(ptActuel);
+
+  let traceSvg = "";
+  if(pointsProj.length >= 2){
+    const polylineCoords = pointsProj.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const pointsEtapes = pointsProj.slice(0, -1).map((p, idx) => {
+      const opac = (0.2 + (idx / pointsProj.length) * 0.6).toFixed(2);
+      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
+    }).join("");
+
+    traceSvg = `
+      <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" stroke-dasharray="4 3"/>
+      ${pointsEtapes}
+    `;
+  }
+
+  layer.innerHTML = `
+    ${traceSvg}
+    <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
+      <line x1="0" y1="0" x2="0" y2="-18" stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 2" transform="rotate(${track})"/>
+      <g transform="rotate(${track})">
+        <path d="M0 -10 L6 5 L0 2 L-6 5 Z" fill="#ffd23f"/>
+      </g>
+      <circle cx="0" cy="0" r="13" fill="none" stroke="#ffd23f" stroke-width="1.2" opacity="0.5"/>
+    </g>
+  `;
+}
+requestAnimationFrame(animer);
+
+/* ===== Boucle principale (Réseau 5s) ===== */
 let enCours = false;
 async function tick(){
   if(enCours) return; enCours = true;
@@ -628,20 +642,46 @@ async function tick(){
     content.innerHTML = `<div class="empty">En attente de localisation…<br><small style="color:var(--slate)">Autorise l'accès à ta position ou utilise le bouton Coordonnées.</small></div>`;
     enCours = false; return;
   }
+  currentPos = pos;
   $("lat").value = pos.lat; $("lon").value = pos.lon;
   try{
     statusEl.textContent = "Recherche…";
     const liste = await chercherAvions(pos);
 
     if(!liste.length){
+      currentPlane = null;
       content.innerHTML = `<div class="empty">Aucun avion détecté dans un rayon de ${RAYON_KM} km pour le moment.</div>`;
       statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
       enCours = false; return;
     }
+
     liste.forEach(a => a._d = distanceKm(pos.lat,pos.lon,a.lat,a.lon));
     liste.sort((a,b)=>a._d-b._d);
     const ac = liste[0];
-    dessiner(ac, ac._d, pos);
+
+    // Mémoriser la trajectoire réseau certifiée
+    if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
+    const hist = trajectoireHistory[ac.hex];
+    const lastPoint = hist[hist.length - 1];
+    if(!lastPoint || (lastPoint.lat !== ac.lat || lastPoint.lon !== ac.lon)){
+      hist.push({ lat: ac.lat, lon: ac.lon });
+      if(hist.length > 50) hist.shift();
+    }
+
+    // Changement d'avion ou premier affichage
+    const planeChanged = !currentPlane || currentPlane.hex !== ac.hex;
+
+    currentPlane = {
+      ...ac,
+      baseLat: ac.lat,
+      baseLon: ac.lon,
+      lastUpdate: performance.now()
+    };
+
+    if(planeChanged){
+      dessiner(ac, pos);
+    }
+
     statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
   }catch(e){
     statusEl.textContent = "Pas de connexion aux données, nouvel essai…";
