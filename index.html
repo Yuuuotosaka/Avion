@@ -149,7 +149,10 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 <script>
 /* ===== Réglages ===== */
 const RAYON_KM = 90;
-const RAFRAICHIR_SEC = 10;
+const RAFRAICHIR_SEC = 5;
+
+/* ===== Historique de trajectoire ===== */
+const trajectoireHistory = {}; // { [hex]: [{lat, lon, t}] }
 
 /* ===== Base locale d'aéroports ===== */
 const AIRPORTS = {
@@ -334,6 +337,21 @@ function gisement(lat1,lon1,lat2,lon2){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
+/* Projection coordonnées GPS -> pixels du radar (centre 150, 150) */
+function projeterSurRadar(posUser, latAvion, lonAvion){
+  const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
+  const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
+  const rPixelMax = 120; // 90 km correspond au cercle de rayon 120 px
+  const distRatio = Math.min(dist / RAYON_KM, 1.25);
+  const rPixel = distRatio * rPixelMax;
+  const angleRad = (azimut - 90) * (Math.PI / 180);
+  return {
+    x: 150 + rPixel * Math.cos(angleRad),
+    y: 150 + rPixel * Math.sin(angleRad),
+    dist
+  };
+}
+
 /* ===== Appel JSONP FR24 ===== */
 function jsonpFR24(url, ms = 7000){
   return new Promise((resolve, reject) => {
@@ -462,25 +480,62 @@ function genererSvgAvion(t){
   `;
 }
 
-/* ===== Mini-Carte Radar Tactique ===== */
+/* ===== Mini-Carte Radar Tactique avec Tracé de Trajectoire ===== */
 function genererRadar(pos, ac, dist){
-  const azimut = gisement(pos.lat, pos.lon, ac.lat, ac.lon);
-  const rPixelMax = 120;
-  const distRatio = Math.min(dist / RAYON_KM, 1);
-  const rPixel = distRatio * rPixelMax;
-  const angleRad = (azimut - 90) * (Math.PI / 180);
-
-  const planeX = 150 + rPixel * Math.cos(angleRad);
-  const planeY = 150 + rPixel * Math.sin(angleRad);
+  const hex = ac.hex;
   const track = typeof ac.track === "number" ? ac.track : 0;
+
+  // 1. Mettre à jour l'historique des positions pour cet avion
+  if(!trajectoireHistory[hex]) trajectoireHistory[hex] = [];
+  const hist = trajectoireHistory[hex];
+  const lastPoint = hist[hist.length - 1];
+
+  // Ajouter si c'est le 1er point ou s'il s'est déplacé
+  if(!lastPoint || (lastPoint.lat !== ac.lat || lastPoint.lon !== ac.lon)){
+    hist.push({ lat: ac.lat, lon: ac.lon, t: Date.now() });
+    if(hist.length > 50) hist.shift();
+  }
+
+  // 2. Projeter tous les points de l'historique sur le radar
+  const pointsProj = hist.map(pt => projeterSurRadar(pos, pt.lat, pt.lon));
+  const ptActuel = pointsProj[pointsProj.length - 1];
+
+  // 3. Construction du tracé SVG
+  let traceSvg = "";
+
+  if(pointsProj.length >= 2){
+    const polylineCoords = pointsProj.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const pointsEtapes = pointsProj.slice(0, -1).map((p, idx) => {
+      const opac = (0.2 + (idx / pointsProj.length) * 0.6).toFixed(2);
+      return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
+    }).join("");
+
+    traceSvg = `
+      <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" stroke-dasharray="4 3"/>
+      ${pointsEtapes}
+    `;
+  } else {
+    const capRad = (track - 90) * (Math.PI / 180);
+    const trailLen = 35;
+    const startX = ptActuel.x - trailLen * Math.cos(capRad);
+    const startY = ptActuel.y - trailLen * Math.sin(capRad);
+
+    traceSvg = `
+      <line x1="${startX.toFixed(1)}" y1="${startY.toFixed(1)}" x2="${ptActuel.x.toFixed(1)}" y2="${ptActuel.y.toFixed(1)}" 
+            stroke="#ffd23f" stroke-width="2" stroke-dasharray="4 3" opacity="0.5"/>
+      <circle cx="${startX.toFixed(1)}" cy="${startY.toFixed(1)}" r="2" fill="#ffd23f" opacity="0.3"/>
+    `;
+  }
 
   return `
     <div class="radar-box" aria-label="Carte radar de position relative">
       <svg viewBox="0 0 300 300">
+        <!-- Cercles de portée : 30 km, 60 km, 90 km -->
         <circle cx="150" cy="150" r="40" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="80" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
         <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.5"/>
 
+        <!-- Axes cardinaux -->
         <line x1="150" y1="14" x2="150" y2="286" stroke="#253557" stroke-width="1" opacity="0.5"/>
         <line x1="14" y1="150" x2="286" y2="150" stroke="#253557" stroke-width="1" opacity="0.5"/>
         <g fill="#8fa1c2" font-family="JetBrains Mono" font-size="10" text-anchor="middle">
@@ -489,17 +544,20 @@ function genererRadar(pos, ac, dist){
           <text x="150" y="66" fill="#8fa1c2" opacity="0.6">60 km</text>
         </g>
 
-        <!-- Position utilisateur -->
+        <!-- Position utilisateur (Maison) -->
         <circle cx="150" cy="150" r="4" fill="#38bdf8"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="#38bdf8" stroke-width="1" opacity="0.4"/>
 
-        <!-- Cible radar -->
-        <g transform="translate(${planeX.toFixed(1)}, ${planeY.toFixed(1)})">
-          <line x1="0" y1="0" x2="0" y2="-18" stroke="#ffd23f" stroke-width="1.5" stroke-dasharray="2 2" transform="rotate(${track})"/>
+        <!-- TRACÉ DE LA TRAJECTOIRE -->
+        ${traceSvg}
+
+        <!-- Cible radar actuelle -->
+        <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
+          <line x1="0" y1="0" x2="0" y2="-18" stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 2" transform="rotate(${track})"/>
           <g transform="rotate(${track})">
-            <path d="M0 -9 L5 5 L0 2 L-5 5 Z" fill="#ffd23f"/>
+            <path d="M0 -10 L6 5 L0 2 L-6 5 Z" fill="#ffd23f"/>
           </g>
-          <circle cx="0" cy="0" r="12" fill="none" stroke="#ffd23f" stroke-width="1" opacity="0.45"/>
+          <circle cx="0" cy="0" r="13" fill="none" stroke="#ffd23f" stroke-width="1.2" opacity="0.5"/>
         </g>
       </svg>
     </div>
@@ -566,7 +624,6 @@ async function tick(){
   if(enCours) return; enCours = true;
   let pos = lirePos();
   if(!pos){
-    // Si aucune position, on lance la détection GPS
     declencherGeolocalisation();
     content.innerHTML = `<div class="empty">En attente de localisation…<br><small style="color:var(--slate)">Autorise l'accès à ta position ou utilise le bouton Coordonnées.</small></div>`;
     enCours = false; return;
@@ -597,7 +654,6 @@ async function tick(){
   enCours = false;
 }
 
-// Lancement au chargement
 tick();
 setInterval(tick, RAFRAICHIR_SEC*1000);
 </script>
