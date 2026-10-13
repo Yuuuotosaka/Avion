@@ -122,7 +122,7 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 <body>
 <div class="wrap">
   <header>
-    <h1>AVION LE PLUS PROCHE</h1>
+    <h1>AVION DE LIGNE LE PLUS PROCHE</h1>
     <div style="display:flex;gap:10px;align-items:center">
       <span id="status">Démarrage…</span>
       <div class="btn-group">
@@ -151,7 +151,7 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch}
 const RAYON_SCAN_KM = 90;
 const RAFRAICHIR_SEC = 5;
 
-/* ===== Mémorisation d'historique (avec localStorage pour persister après rechargement) ===== */
+/* ===== Mémorisation d'historique persistant ===== */
 let trajectoireHistory = {};
 try {
   trajectoireHistory = JSON.parse(localStorage.getItem("traj_cache") || "{}");
@@ -379,6 +379,7 @@ function jsonpFR24(url, ms = 7000){
   });
 }
 
+/* ===== Récupération des avions (Filtre strict avions de ligne) ===== */
 async function chercherAvions(pos){
   const deg = RAYON_SCAN_KM / 111.32;
   const lamin = (pos.lat - deg).toFixed(4);
@@ -386,7 +387,7 @@ async function chercherAvions(pos){
   const lomin = (pos.lon - deg).toFixed(4);
   const lomax = (pos.lon + deg).toFixed(4);
 
-  const url = `https://data-cloud.flightradar24.com/zones/fcgi/feed.js?bounds=${lamax},${lamin},${lomin},${lomax}&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
+  const url = `https://data-cloud.flightradar24.com/zones/fcgi/feed.js?bounds=${lamax},${lamin},${lomin},${lomax}&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=0&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
 
   const j = await jsonpFR24(url);
   const liste = [];
@@ -394,19 +395,36 @@ async function chercherAvions(pos){
     if(["full_count", "version", "stats"].includes(k)) continue;
     const d = j[k];
     if(Array.isArray(d) && typeof d[1] === "number" && typeof d[2] === "number"){
-      liste.push({
-        hex: d[0],
-        lat: d[1],
-        lon: d[2],
-        track: d[3],
-        alt_baro: d[4],
-        gs: d[5],
-        t: (d[8] || "").toUpperCase().trim(),
-        r: d[9],
-        origin: d[11],
-        dest: d[12],
-        flight: (d[16] || d[13] || "").trim()
-      });
+      const origin = (d[11] || "").trim().toUpperCase();
+      const dest = (d[12] || "").trim().toUpperCase();
+      const flight = (d[16] || d[13] || "").trim();
+      const typeAppareil = (d[8] || "").toUpperCase().trim();
+      const alt = d[4];
+
+      // FILTRE STRICT :
+      // 1. Origine ET Destination doivent obligatoirement être renseignées (codes IATA à 3 lettres)
+      // 2. Doit avoir un numéro de vol commercial
+      // 3. Ne doit pas être au sol (altitude > 100 pieds ou alt !== "ground")
+      // 4. Exclusion des hélicoptères et avions ultralégers sans itinéraire commercial
+      const isHelico = /^(EC|H1|H2|R22|R44|R66|AS3|A109|A139|B06|B407|B429|S76|UH60)/.test(typeAppareil);
+      const hasPlanComplet = origin.length === 3 && dest.length === 3;
+      const enVol = alt !== "ground" && alt > 100;
+
+      if(hasPlanComplet && flight.length >= 2 && enVol && !isHelico){
+        liste.push({
+          hex: d[0],
+          lat: d[1],
+          lon: d[2],
+          track: d[3],
+          alt_baro: d[4],
+          gs: d[5],
+          t: typeAppareil,
+          r: d[9],
+          origin: origin,
+          dest: dest,
+          flight: flight
+        });
+      }
     }
   }
   return liste;
@@ -415,26 +433,16 @@ async function chercherAvions(pos){
 /* ===== Dessins techniques d'avions (Blueprint) ===== */
 function detecterProfil(t){
   if(!t) return { type: "TWIN_JET", label: "Avion de Ligne Bimoteur" };
-  if(/^(EC|H1|H2|R22|R44|R66|AS3|A109|A139|B06|B407|B429|S76|UH60)/.test(t)) return { type: "HELICOPTER", label: "Hélicoptère" };
   if(/^(A388|A34|B74|C17|AN12)/.test(t)) return { type: "HEAVY_QUAD", label: "Gros Porteur Quadrimoteur" };
-  if(/^(AT4|AT7|DH8|DH4|B350|BE20|PC12|C208|DHC6|TBM)/.test(t)) return { type: "TURBOPROP", label: "Turbopropulseur Régional" };
-  if(/^(C5|C25|C56|C68|C75|GLF|GLEX|CL3|CL6|FA7X|FA8X|E55P|E50P|LJ|PRM1|HA4T)/.test(t)) return { type: "BIZJET", label: "Jet d'Affaires Privé" };
-  if(/^(C172|C182|C152|PA28|PA38|DR40|SR20|SR22|DA40|DA42|P28A)/.test(t)) return { type: "LIGHT_PROP", label: "Aviation Légère" };
+  if(/^(AT4|AT7|DH8|DH4|B350|BE20|PC12|C208|DHC6|TBM)/.test(t)) return { type: "TURBOPROP", label: "Turbopropulseur Commercial" };
+  if(/^(C5|C25|C56|C68|C75|GLF|GLEX|CL3|CL6|FA7X|FA8X|E55P|E50P|LJ|PRM1|HA4T)/.test(t)) return { type: "BIZJET", label: "Jet d'Affaires" };
   return { type: "TWIN_JET", label: "Avion de Ligne Bimoteur" };
 }
 
 function genererSvgAvion(t){
   const p = detecterProfil(t);
   let art = "";
-  if(p.type === "HELICOPTER"){
-    art = `
-      <line x1="40" y1="130" x2="260" y2="130" stroke="#ffd23f" stroke-width="2.5" opacity="0.85"/>
-      <circle cx="150" cy="130" r="7" fill="#ffd23f"/>
-      <ellipse cx="150" cy="130" rx="100" ry="24" fill="none" stroke="#ffd23f" stroke-dasharray="4 6" opacity="0.35"/>
-      <path d="M150 75 C162 75 168 95 168 125 C168 155 158 175 154 200 L153 235 L158 240 L158 250 L142 250 L142 240 L147 235 L146 200 C142 175 132 155 132 125 C132 95 138 75 150 75 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <line x1="138" y1="245" x2="162" y2="245" stroke="#ffd23f" stroke-width="2"/>
-    `;
-  } else if(p.type === "HEAVY_QUAD"){
+  if(p.type === "HEAVY_QUAD"){
     art = `
       <path d="M150 115 L285 168 L285 178 L168 162 L150 162 L132 162 L15 178 L15 168 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <rect x="75" y="148" width="8" height="26" rx="3" fill="#ffd23f"/><rect x="105" y="140" width="8" height="26" rx="3" fill="#ffd23f"/>
@@ -457,13 +465,6 @@ function genererSvgAvion(t){
       <path d="M150 232 L200 246 L200 252 L150 246 L100 252 L100 246 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <path d="M150 58 C161 58 163 85 163 145 L163 205 C163 235 155 255 150 258 C145 255 137 235 137 205 L137 145 C137 85 139 58 150 58 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
     `;
-  } else if(p.type === "LIGHT_PROP"){
-    art = `
-      <line x1="130" y1="72" x2="170" y2="72" stroke="#ffd23f" stroke-width="3"/><ellipse cx="150" cy="72" rx="20" ry="3.5" fill="none" stroke="#ffd23f" stroke-dasharray="2 3"/>
-      <path d="M150 115 L260 128 L260 144 L160 144 L150 144 L140 144 L40 144 L40 128 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 220 L188 238 L188 244 L150 238 L112 244 L112 238 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 72 C158 72 161 95 161 140 L159 190 C159 218 154 242 150 246 C146 242 141 218 141 190 L139 140 C139 95 142 72 150 72 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
-    `;
   } else {
     art = `
       <path d="M150 118 L275 174 L272 184 L165 156 L150 156 L135 156 L28 184 L25 174 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
@@ -475,7 +476,7 @@ function genererSvgAvion(t){
 
   return `
     <div class="plane-canvas">
-      <div class="plane-hud-badge">${esc(t || "AIRCRAFT")}</div>
+      <div class="plane-hud-badge">${esc(t || "AIRLINER")}</div>
       <div class="plane-hud-type">${esc(p.label)}</div>
       <svg class="blueprint" viewBox="0 0 300 300">
         <circle cx="150" cy="150" r="135" fill="none" stroke="#253557" stroke-width="1" opacity="0.5"/>
@@ -524,11 +525,10 @@ function dessiner(ac, pos, dist){
   const cap = ac.track;
   const hasCap = typeof cap === "number";
   const alt = ac.alt_baro;
-  const auSol = alt === "ground" || alt === 0;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
-  const nom = (ac.flight||"").trim() || ac.r || ac.hex || "Inconnu";
-  const modele = ac.t || "Modèle non renseigné";
+  const nom = ac.flight || ac.r || ac.hex || "Inconnu";
+  const modele = ac.t || "Avion de ligne";
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
@@ -539,19 +539,18 @@ function dessiner(ac, pos, dist){
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
 
-  const routeHtml = (ac.origin || ac.dest)
-    ? `<div class="route-box">
-        <div class="route-main">
-          <span>${esc(dep.code)}</span>
-          <span class="route-arrow">→</span>
-          <span>${esc(arr.code)}</span>
-        </div>
-        <div class="route-sub">
-          <span><b>De :</b> <span id="apt-${esc(dep.code)}">${esc(dep.label)}</span></span>
-          <span><b>Vers :</b> <span id="apt-${esc(arr.code)}">${esc(arr.label)}</span></span>
-        </div>
-      </div>`
-    : `<div class="route-box"><div class="route-sub">Trajet non disponible (plan de vol privé ou absent)</div></div>`;
+  const routeHtml = `
+    <div class="route-box">
+      <div class="route-main">
+        <span>${esc(dep.code)}</span>
+        <span class="route-arrow">→</span>
+        <span>${esc(arr.code)}</span>
+      </div>
+      <div class="route-sub">
+        <span><b>De :</b> <span id="apt-${esc(dep.code)}">${esc(dep.label)}</span></span>
+        <span><b>Vers :</b> <span id="apt-${esc(arr.code)}">${esc(arr.label)}</span></span>
+      </div>
+    </div>`;
 
   content.innerHTML = `
   <main>
@@ -567,7 +566,7 @@ function dessiner(ac, pos, dist){
       ${radarHtml}
       <div class="stats">
         <div class="stat"><div class="v">${hasCap?Math.round(cap)+"°":"—"}<i>${hasCap?nomCap(cap):""}</i></div><div class="l">Cap magnétique</div></div>
-        <div class="stat"><div class="v">${auSol?"Au sol":(altM!==null?arrondi(altM):"—")}<i>${altM!==null?"m":""}</i></div><div class="l">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
+        <div class="stat"><div class="v">${altM!==null?arrondi(altM):"—"}<i>${altM!==null?"m":""}</i></div><div class="l">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
         <div class="stat"><div class="v">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
         <div class="stat"><div class="v" id="live-distance">—<i>km</i></div><div class="l">Distance de toi</div></div>
       </div>
@@ -575,7 +574,7 @@ function dessiner(ac, pos, dist){
   </main>`;
 }
 
-/* ===== Boucle d'animation à 60 FPS (Tracé antérieur garanti) ===== */
+/* ===== Boucle d'animation à 60 FPS ===== */
 function animer(){
   requestAnimationFrame(animer);
   if(!currentPlane || !currentPos) return;
@@ -586,7 +585,7 @@ function animer(){
   const now = performance.now();
   const dt = (now - currentPlane.lastUpdate) / 1000;
 
-  // Calcul du déplacement en temps réel
+  // Déplacement calculé en direct
   const track = typeof currentPlane.track === "number" ? currentPlane.track : 0;
   const gsKmh = (typeof currentPlane.gs === "number" ? currentPlane.gs : 0) * 1.852;
   const distKmTraveled = (gsKmh / 3600) * dt;
@@ -605,15 +604,14 @@ function animer(){
     distEl.innerHTML = `${ptActuel.dist.toFixed(1).replace(".",",")}<i>km</i>`;
   }
 
-  // 1. Récupération des points réels enregistrés pour cet appareil
+  // Historique réel
   const hex = currentPlane.hex;
   const hist = trajectoireHistory[hex] || [];
   let pointsTrajet = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon, currentRadarMaxKm));
 
-  // 2. Reconstitution automatique en amont (Sillage garanti dès la 1ère seconde)
-  // On calcule des points en arrière sur le cap inverse jusqu'à sortir du bord du radar
+  // Reconstitution automatique en amont sur le cap inverse
   const retroPoints = [];
-  const distanceArriereMaxKm = currentRadarMaxKm * 1.3; // couvre toute la largeur du radar
+  const distanceArriereMaxKm = currentRadarMaxKm * 1.35;
   const nbEtapes = 8;
   for(let i = nbEtapes; i >= 1; i--){
     const distStep = (distanceArriereMaxKm / nbEtapes) * i;
@@ -622,31 +620,24 @@ function animer(){
     retroPoints.push(projeterSurRadar(currentPos, rLat, rLon, currentRadarMaxKm));
   }
 
-  // On combine le sillage en amont avec les points réels et la position actuelle
   const trajetComplet = [...retroPoints, ...pointsTrajet, ptActuel];
 
-  // Construction du tracé SVG
   const polylineCoords = trajetComplet.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const pointsEtapes = trajetComplet.slice(0, -1).map((p, idx) => {
     const opac = (0.10 + (idx / trajetComplet.length) * 0.65).toFixed(2);
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
   }).join("");
 
-  // Trajectoire future anticipée (court vecteur en pointillé devant lui)
+  // Vecteur d'anticipation
   const futLen = 22;
   const futX = ptActuel.x + futLen * Math.sin(trackRad);
   const futY = ptActuel.y - futLen * Math.cos(trackRad);
 
   layer.innerHTML = `
-    <!-- Tracé complet antérieur (depuis son entrée dans la zone radar) -->
     <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
     ${pointsEtapes}
-
-    <!-- Trajectoire future anticipée -->
     <line x1="${ptActuel.x.toFixed(1)}" y1="${ptActuel.y.toFixed(1)}" x2="${futX.toFixed(1)}" y2="${futY.toFixed(1)}" 
           stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
-
-    <!-- L'avion à sa position en direct -->
     <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
       <g transform="rotate(${track})">
         <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="#ffd23f"/>
@@ -675,7 +666,7 @@ async function tick(){
 
     if(!liste.length){
       currentPlane = null;
-      content.innerHTML = `<div class="empty">Aucun avion détecté dans un rayon de ${RAYON_SCAN_KM} km pour le moment.</div>`;
+      content.innerHTML = `<div class="empty">Aucun avion de ligne commercial avec itinéraire complet détecté à moins de ${RAYON_SCAN_KM} km pour le moment.</div>`;
       statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
       enCours = false; return;
     }
@@ -684,7 +675,7 @@ async function tick(){
     liste.sort((a,b)=>a._d-b._d);
     const ac = liste[0];
 
-    // Enregistrement continu dans l'historique persistent
+    // Mémorisation de la trajectoire
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
     const lastPoint = hist[hist.length - 1];
