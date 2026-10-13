@@ -23,7 +23,7 @@ header{
   justify-content:space-between;
   align-items:center;
   gap:16px;
-  border-bottom:1px solid rgba(255,255,255,0.06);
+  border-bottom:1px solid rgba(255,255,205,0.06);
   padding-bottom:14px;
 }
 .brand{display:flex;flex-direction:column;gap:2px}
@@ -98,7 +98,6 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
 
 .left{display:flex;flex-direction:column;gap:16px}
 
-/* Bannière détection d'avion */
 .detection-banner{
   display:flex;
   align-items:center;
@@ -207,9 +206,46 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   z-index:2;
 }
 
-.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(56px,9vw,96px);line-height:.92;color:var(--sign);letter-spacing:.02em}
-.model{font-size:20px;font-weight:500;color:var(--cloud);margin-top:2px}
-.model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
+/* Titre modèle en grand jaune */
+.model-hero{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:clamp(38px,6vw,62px);
+  line-height:0.98;
+  color:var(--sign);
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+
+/* Ligne immatriculation & vol */
+.immat-sub{
+  font-size:18px;
+  font-weight:500;
+  color:var(--cloud);
+  margin-top:4px;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.immat-sub .reg{
+  font-family:'JetBrains Mono',monospace;
+  font-size:16px;
+  color:var(--cyan);
+  background:rgba(56,189,248,0.1);
+  border:1px solid rgba(56,189,248,0.25);
+  padding:2px 7px;
+  border-radius:4px;
+}
+.immat-sub .flight{color:var(--slate)}
+.immat-sub small{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--slate);
+  background:rgba(255,255,255,0.06);
+  padding:2px 6px;
+  border-radius:4px;
+}
 
 .route-box{
   background:rgba(22,34,61,0.45);
@@ -365,7 +401,7 @@ let currentRadarMaxKm = 30;
 /* ===== Base étendue des modèles d'avions ===== */
 const MODEL_NAMES = {
   DR40: "Robin DR400", DR48: "Robin DR400 Regent", C172: "Cessna 172 Skyhawk", C182: "Cessna 182 Skylane",
-  C152: "Cessna 152", C150: "Cess0 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
+  C152: "Cessna 152", C150: "Cessna 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
   PA38: "Piper PA-38 Tomahawk", SR20: "Cirrus SR20", SR22: "Cirrus SR22", DA40: "Diamond DA40 Diamond Star",
   DA42: "Diamond DA42 Twin Star", DA62: "Diamond DA62", TB20: "SOCATA TB-20 Trinidad", TB10: "SOCATA TB-10 Tobago",
   AP22: "Aeroprakt A-22 Foxbat", AT72: "ATR 72-500/600", AT76: "ATR 72-600", AT75: "ATR 72-500",
@@ -822,16 +858,20 @@ function genererStructureRadar(maxKm){
   `;
 }
 
-/* ===== Affichage Complet ===== */
+/* ===== Affichage Complet (Modèle en grand jaune, immatriculation sous-titre) ===== */
 function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
-  const nom = ac.flight || ac.r || ac.hex || "Inconnu";
   
+  // Modèle d'avion (Titre principal en grand jaune)
   const nomCompletModele = traduireNomModele(ac.t);
+  
+  // Immatriculation et vol (Sous-titre)
+  const immatTexte = ac.r ? `<span class="reg">${esc(ac.r)}</span>` : `<span class="reg">${esc(ac.hex)}</span>`;
+  const volTexte = ac.flight ? `<span class="flight">Vol <b>${esc(ac.flight)}</b></span>` : "";
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
-  const immat = ac.r ? ` — ${esc(ac.r)}` : "";
+
   const eta = estimerHeureArrivee(ac);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
@@ -872,8 +912,12 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       ${bannerHtml}
       ${drawingHtml}
       <div>
-        <div class="callsign">${esc(nom)}</div>
-        <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
+        <div class="model-hero">${esc(nomCompletModele)}</div>
+        <div class="immat-sub">
+          ${immatTexte}
+          ${volTexte}
+          ${codeIcaoBadge}
+        </div>
         ${routeHtml}
       </div>
     </div>
