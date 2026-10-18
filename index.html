@@ -314,7 +314,6 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
 .settings .go{background:var(--sign);color:var(--ink);border-color:var(--sign);font-weight:600}
 .btn-geo{background:rgba(56,189,248,0.1);border-color:var(--cyan);color:var(--cyan);font-weight:500}
 
-/* Compteurs de trafic en bas de page */
 .traffic-footer{
   display:flex;
   justify-content:center;
@@ -1028,6 +1027,9 @@ function animer(){
 }
 requestAnimationFrame(animer);
 
+/* Déclaration du verrou pour éviter l'erreur de référence */
+let enCours = false;
+
 async function tick(){
   if(enCours) return; enCours = true;
   let pos = lirePos();
@@ -1133,7 +1135,11 @@ async function initCompteurVisites() {
   setInterval(updateLive, 12000);
 }
 
-window.addEventListener("DOMContentLoaded", initCompteurVisites);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCompteurVisites);
+} else {
+  initCompteurVisites();
+}
 
 tick();
 setInterval(tick, RAFRAICHIR_SEC*1000);
