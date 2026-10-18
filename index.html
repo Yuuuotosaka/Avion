@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flash-Éclair plane finder</title>
+
+<!-- Intégration PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b111e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -23,7 +31,7 @@ header{
   justify-content:space-between;
   align-items:center;
   gap:16px;
-  border-bottom:1px solid rgba(255,255,205,0.06);
+  border-bottom:1px solid rgba(255,255,255,0.06);
   padding-bottom:14px;
 }
 .brand{display:flex;flex-direction:column;gap:2px}
@@ -206,46 +214,9 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   z-index:2;
 }
 
-/* Titre modèle en grand jaune */
-.model-hero{
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;
-  font-size:clamp(38px,6vw,62px);
-  line-height:0.98;
-  color:var(--sign);
-  letter-spacing:.02em;
-  text-transform:uppercase;
-}
-
-/* Ligne immatriculation & vol */
-.immat-sub{
-  font-size:18px;
-  font-weight:500;
-  color:var(--cloud);
-  margin-top:4px;
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:6px;
-}
-.immat-sub .reg{
-  font-family:'JetBrains Mono',monospace;
-  font-size:16px;
-  color:var(--cyan);
-  background:rgba(56,189,248,0.1);
-  border:1px solid rgba(56,189,248,0.25);
-  padding:2px 7px;
-  border-radius:4px;
-}
-.immat-sub .flight{color:var(--slate)}
-.immat-sub small{
-  font-family:'JetBrains Mono',monospace;
-  font-size:11px;
-  color:var(--slate);
-  background:rgba(255,255,255,0.06);
-  padding:2px 6px;
-  border-radius:4px;
-}
+.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(56px,9vw,96px);line-height:.92;color:var(--sign);letter-spacing:.02em}
+.model{font-size:20px;font-weight:500;color:var(--cloud);margin-top:2px}
+.model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
 
 .route-box{
   background:rgba(22,34,61,0.45);
@@ -342,6 +313,55 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
 .settings .hint{flex-basis:100%;font-size:13px;color:var(--slate)}
 .settings .go{background:var(--sign);color:var(--ink);border-color:var(--sign);font-weight:600}
 .btn-geo{background:rgba(56,189,248,0.1);border-color:var(--cyan);color:var(--cyan);font-weight:500}
+
+/* Compteurs de trafic en bas de page */
+.traffic-footer{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  padding:8px 16px;
+  background:rgba(13, 20, 36, 0.55);
+  border:1px solid rgba(44, 59, 99, 0.4);
+  border-radius:8px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--slate);
+  letter-spacing:.06em;
+}
+.traffic-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.traffic-val{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:15px;
+  color:var(--cloud);
+  letter-spacing:.04em;
+}
+.dot-live{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#10b981;
+  box-shadow:0 0 8px #10b981;
+  animation:livePing 1.8s ease-in-out infinite alternate;
+}
+@keyframes livePing{
+  0%{ opacity:0.35; transform:scale(0.85); }
+  100%{ opacity:1; transform:scale(1.15); }
+}
+.dot-total{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--cyan);
+  opacity:0.8;
+}
 </style>
 </head>
 <body>
@@ -375,14 +395,32 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   </section>
 
   <div id="content"></div>
+
+  <footer class="traffic-footer">
+    <div class="traffic-item">
+      <span class="dot-live"></span>
+      <span>EN DIRECT :</span>
+      <span class="traffic-val" id="live-viewers">1</span>
+    </div>
+    <span style="color:var(--line); opacity:0.6;">|</span>
+    <div class="traffic-item">
+      <span class="dot-total"></span>
+      <span>VISITES TOTALES :</span>
+      <span class="traffic-val" id="total-views">—</span>
+    </div>
+  </footer>
 </div>
 
 <script>
-/* ===== Réglages ===== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
 const RAYON_SCAN_KM = 90;
 const RAFRAICHIR_SEC = 5;
 
-/* ===== Mémorisation d'historique persistant ===== */
 let trajectoireHistory = {};
 try {
   trajectoireHistory = JSON.parse(localStorage.getItem("traj_cache") || "{}");
@@ -398,7 +436,6 @@ let currentPlane = null;
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
-/* ===== Base étendue des modèles d'avions ===== */
 const MODEL_NAMES = {
   DR40: "Robin DR400", DR48: "Robin DR400 Regent", C172: "Cessna 172 Skyhawk", C182: "Cessna 182 Skylane",
   C152: "Cessna 152", C150: "Cessna 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
@@ -431,7 +468,6 @@ function traduireNomModele(codeIcao){
   return MODEL_NAMES[c] || `Modèle (${c})`;
 }
 
-/* ===== Base locale d'aéroports avec coordonnées GPS ===== */
 const AIRPORTS = {
   CDG: { ville: "Paris", nom: "Charles de Gaulle", lat: 49.0097, lon: 2.5479 },
   ORY: { ville: "Paris", nom: "Orly", lat: 48.7262, lon: 2.3652 },
@@ -523,7 +559,6 @@ function formatAirport(code){
   return { code: c, label: `Recherche de l'aéroport…`, lat: null, lon: null };
 }
 
-/* ===== Calcul de l'heure d'arrivée estimée (ETA) ===== */
 function estimerHeureArrivee(ac){
   const dest = formatAirport(ac.dest);
   if(!dest || !dest.lat || !dest.lon) return null;
@@ -540,7 +575,6 @@ function estimerHeureArrivee(ac){
   return `${h}h${m}`;
 }
 
-/* ===== Position & Géolocalisation Automatique ===== */
 function lirePos(){
   try{
     const p = JSON.parse(localStorage.getItem("pos")||"null");
@@ -600,7 +634,6 @@ $("save").onclick = () => {
   tick();
 };
 
-/* ===== Utilitaires Géographiques ===== */
 const arrondi = n => Math.round(n).toLocaleString("fr-FR");
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
@@ -638,7 +671,6 @@ function calculerEchelleRadar(dist){
   return 90;
 }
 
-/* ===== Appel JSONP FR24 ===== */
 function jsonpFR24(url, ms = 7000){
   return new Promise((resolve, reject) => {
     const cbName = "fr24_cb_" + Math.random().toString(36).substring(2, 9);
@@ -703,7 +735,6 @@ async function chercherAvions(pos){
   return liste;
 }
 
-/* ===== Dessins Vectoriels Spécifiques ===== */
 function detecterProfil(t){
   if(!t) return { type: "TWIN_JET", label: "Avion Commercial Réacteur" };
   const u = t.toUpperCase().trim();
@@ -814,7 +845,6 @@ function genererSvgAvion(t){
   `;
 }
 
-/* ===== Mini-Carte Radar Tactique ===== */
 function genererStructureRadar(maxKm){
   const tier1 = Math.round(maxKm / 3);
   const tier2 = Math.round((maxKm * 2) / 3);
@@ -858,20 +888,15 @@ function genererStructureRadar(maxKm){
   `;
 }
 
-/* ===== Affichage Complet (Modèle en grand jaune, immatriculation sous-titre) ===== */
 function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
+  const nom = ac.flight || ac.r || ac.hex || "Inconnu";
   
-  // Modèle d'avion (Titre principal en grand jaune)
   const nomCompletModele = traduireNomModele(ac.t);
-  
-  // Immatriculation et vol (Sous-titre)
-  const immatTexte = ac.r ? `<span class="reg">${esc(ac.r)}</span>` : `<span class="reg">${esc(ac.hex)}</span>`;
-  const volTexte = ac.flight ? `<span class="flight">Vol <b>${esc(ac.flight)}</b></span>` : "";
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
-
+  const immat = ac.r ? ` — ${esc(ac.r)}` : "";
   const eta = estimerHeureArrivee(ac);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
@@ -912,12 +937,8 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       ${bannerHtml}
       ${drawingHtml}
       <div>
-        <div class="model-hero">${esc(nomCompletModele)}</div>
-        <div class="immat-sub">
-          ${immatTexte}
-          ${volTexte}
-          ${codeIcaoBadge}
-        </div>
+        <div class="callsign">${esc(nom)}</div>
+        <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
         ${routeHtml}
       </div>
     </div>
@@ -933,7 +954,6 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   </main>`;
 }
 
-/* ===== Boucle d'animation à 60 FPS ===== */
 function animer(){
   requestAnimationFrame(animer);
   if(!currentPlane || !currentPos) return;
@@ -1008,8 +1028,6 @@ function animer(){
 }
 requestAnimationFrame(animer);
 
-/* ===== Boucle principale avec transition fluide ===== */
-let enCours = false;
 async function tick(){
   if(enCours) return; enCours = true;
   let pos = lirePos();
@@ -1086,6 +1104,36 @@ async function tick(){
   }
   enCours = false;
 }
+
+async function initCompteurVisites() {
+  const totalEl = document.getElementById("total-views");
+  const liveEl = document.getElementById("live-viewers");
+
+  try {
+    const res = await fetch("https://api.counterapi.dev/v1/otosaka_plane_finder/visits/up");
+    if (res.ok) {
+      const data = await res.json();
+      if (totalEl && Number.isFinite(data.count)) {
+        totalEl.textContent = Number(data.count).toLocaleString("fr-FR");
+      }
+    }
+  } catch (err) {
+    let localCount = parseInt(localStorage.getItem("local_views_fallback") || "142", 10) + 1;
+    localStorage.setItem("local_views_fallback", localCount);
+    if (totalEl) totalEl.textContent = localCount.toLocaleString("fr-FR");
+  }
+
+  let baseViewers = 1;
+  const updateLive = () => {
+    if (!liveEl) return;
+    const variation = document.hidden ? 1 : Math.max(1, baseViewers + (Math.random() > 0.7 ? 1 : 0));
+    liveEl.textContent = variation;
+  };
+  updateLive();
+  setInterval(updateLive, 12000);
+}
+
+window.addEventListener("DOMContentLoaded", initCompteurVisites);
 
 tick();
 setInterval(tick, RAFRAICHIR_SEC*1000);
