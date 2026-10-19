@@ -76,7 +76,6 @@ header{
   text-transform:uppercase;
 }
 
-#status{font-size:12px;color:var(--slate);font-family:'JetBrains Mono',monospace}
 .btn-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 button{
   font:inherit;
@@ -402,18 +401,15 @@ body.night-mode .traffic-footer{
       </div>
       <div class="brand-sub">SURVEILLANCE RADAR DE PROXIMITÉ</div>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span id="status">Démarrage…</span>
-      <div class="btn-group">
-        <button id="btn-night" class="btn-night" type="button" title="Mode Nuit / Cockpit">
-          🌙 AUTO
-        </button>
-        <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-          GPS
-        </button>
-        <button id="cfg" type="button">Coordonnées</button>
-      </div>
+    <div class="btn-group">
+      <button id="btn-night" class="btn-night" type="button" title="Mode Nuit / Cockpit">
+        🌙 AUTO
+      </button>
+      <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+        GPS
+      </button>
+      <button id="cfg" type="button">Coordonnées</button>
     </div>
   </header>
 
@@ -667,10 +663,8 @@ function ecrirePos(p){
 
 function declencherGeolocalisation(){
   if(!navigator.geolocation){
-    statusEl.textContent = "GPS non pris en charge";
     return;
   }
-  statusEl.textContent = "Localisation GPS…";
   navigator.geolocation.getCurrentPosition(
     pos => {
       const p = {
@@ -681,11 +675,9 @@ function declencherGeolocalisation(){
       $("lat").value = p.lat;
       $("lon").value = p.lon;
       $("settings").classList.remove("open");
-      statusEl.textContent = "Position GPS trouvée";
       tick();
     },
     err => {
-      statusEl.textContent = "Accès GPS refusé";
       const p = lirePos();
       if(!p) $("settings").classList.add("open");
     },
@@ -698,7 +690,7 @@ let modeNuitSetting = localStorage.getItem("cockpit_night_setting") || "auto";
 
 function estHeureDeNuit() {
   const h = new Date().getHours();
-  return h >= 21 || h < 7; // Actif entre 21h00 et 06h59
+  return h >= 21 || h < 7;
 }
 
 function actualiserThemeNuit() {
@@ -739,7 +731,9 @@ setInterval(() => {
 }, 60000);
 
 const $ = id => document.getElementById(id);
-const content = $("content"), statusEl = $("status");
+const content = $("content");
+/* Objet factice pour absorber les affectations de statut sans générer d'erreur */
+const statusEl = { set textContent(_) {} };
 
 $("cfg").onclick = () => $("settings").classList.toggle("open");
 $("btn-gps").onclick = declencherGeolocalisation;
@@ -750,7 +744,7 @@ $("save").onclick = () => {
   const lat = parseFloat($("lat").value.replace(",","."));
   const lon = parseFloat($("lon").value.replace(",","."));
   if(!isFinite(lat) || !isFinite(lon) || Math.abs(lat)>90 || Math.abs(lon)>180){
-    statusEl.textContent = "Coordonnées invalides"; return;
+    return;
   }
   ecrirePos({lat,lon});
   $("settings").classList.remove("open");
@@ -1207,14 +1201,12 @@ async function tick(){
   currentPos = pos;
   $("lat").value = pos.lat; $("lon").value = pos.lon;
   try{
-    statusEl.textContent = "Recherche…";
     const liste = await chercherAvions(pos);
 
     if(!liste.length){
       currentPlane = null;
       currentNearbyPlanes = [];
       content.innerHTML = `<div class="empty">Aucun avion de ligne commercial avec itinéraire complet détecté à moins de ${RAYON_SCAN_KM} km pour le moment.</div>`;
-      statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
       enCours = false; return;
     }
 
@@ -1264,9 +1256,7 @@ async function tick(){
       }
     }
 
-    statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
   }catch(e){
-    statusEl.textContent = "Pas de connexion aux données, nouvel essai…";
     if(!document.getElementById("err")){
       content.innerHTML = '<div class="empty" id="err"></div>';
     }
@@ -1276,7 +1266,6 @@ async function tick(){
   enCours = false;
 }
 
-/* Compteur de visites sans blocage CORS */
 async function initCompteurVisites() {
   const totalEl = document.getElementById("total-views");
   const liveEl = document.getElementById("live-viewers");
@@ -1330,7 +1319,6 @@ async function initCompteurVisites() {
   setInterval(updateLive, 10000);
 }
 
-// Initialisation du thème Nuit / Jour
 actualiserThemeNuit();
 
 if (document.readyState === "loading") {
