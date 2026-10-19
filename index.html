@@ -227,7 +227,6 @@ body.night-mode .plane-canvas{
 .model{font-size:20px;font-weight:500;color:var(--cloud);margin-top:2px}
 .model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
 
-/* Route & Timeline */
 .route-box{
   background:rgba(22,34,61,0.45);
   border:1px solid var(--line);
@@ -253,7 +252,6 @@ body.night-mode .route-box{
 .route-arrow{color:var(--sign);font-size:20px}
 .route-sub{font-size:13px;color:var(--slate);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
-/* Timeline Progression de vol */
 .progress-wrap{
   display:flex;
   flex-direction:column;
@@ -408,7 +406,7 @@ body.night-mode .traffic-footer{
       <span id="status">Démarrage…</span>
       <div class="btn-group">
         <button id="btn-night" class="btn-night" type="button" title="Mode Nuit / Cockpit">
-          🌙 NUIT
+          🌙 AUTO
         </button>
         <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
@@ -439,7 +437,7 @@ body.night-mode .traffic-footer{
     <div class="traffic-item">
       <span class="dot-total"></span>
       <span>VISITES TOTALES :</span>
-      <span class="traffic-val" id="total-views">—</span>
+      <span class="traffic-val" id="total-views">1</span>
     </div>
   </footer>
 </div>
@@ -466,11 +464,10 @@ function sauverHistorique(){
 }
 
 let currentPlane = null;
-let currentNearbyPlanes = []; // Autres avions de la zone en filigrane
+let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
-/* ===== Base Compagnies Aériennes (Préfixes ICAO) ===== */
 const AIRLINES = {
   AFR: { nom: "Air France", color: "#002157", text: "#fff" },
   HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff" },
@@ -504,7 +501,6 @@ function resoudreCompagnie(callsign){
   return AIRLINES[prefix] || null;
 }
 
-/* ===== Base étendue des modèles d'avions ===== */
 const MODEL_NAMES = {
   DR40: "Robin DR400", DR48: "Robin DR400 Regent", C172: "Cessna 172 Skyhawk", C182: "Cessna 182 Skylane",
   C152: "Cessna 152", C150: "Cessna 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
@@ -697,23 +693,50 @@ function declencherGeolocalisation(){
   );
 }
 
-/* Gestion du Mode Nuit Cockpit */
-let modeNuit = localStorage.getItem("cockpit_night") === "true";
-function appliquerModeNuit(actif){
-  modeNuit = actif;
-  localStorage.setItem("cockpit_night", modeNuit);
+/* ===== Gestion du Mode Nuit : Auto + Manuel ===== */
+let modeNuitSetting = localStorage.getItem("cockpit_night_setting") || "auto";
+
+function estHeureDeNuit() {
+  const h = new Date().getHours();
+  return h >= 21 || h < 7; // Actif entre 21h00 et 06h59
+}
+
+function actualiserThemeNuit() {
   const btn = $("btn-night");
-  if(modeNuit){
+  let actif = false;
+
+  if (modeNuitSetting === "auto") {
+    actif = estHeureDeNuit();
+    if (btn) btn.textContent = actif ? "🌙 NUIT (AUTO)" : "☀️ JOUR (AUTO)";
+  } else {
+    actif = (modeNuitSetting === "true");
+    if (btn) btn.textContent = actif ? "🌙 NUIT (FORCÉ)" : "☀️ JOUR (FORCÉ)";
+  }
+
+  if (actif) {
     document.body.classList.add("night-mode");
-    if(btn) btn.classList.add("active");
+    if (btn) btn.classList.add("active");
   } else {
     document.body.classList.remove("night-mode");
-    if(btn) btn.classList.remove("active");
+    if (btn) btn.classList.remove("active");
   }
 }
-function toggleModeNuit(){
-  appliquerModeNuit(!modeNuit);
+
+function toggleModeNuit() {
+  if (modeNuitSetting === "auto") {
+    modeNuitSetting = "true";
+  } else if (modeNuitSetting === "true") {
+    modeNuitSetting = "false";
+  } else {
+    modeNuitSetting = "auto";
+  }
+  localStorage.setItem("cockpit_night_setting", modeNuitSetting);
+  actualiserThemeNuit();
 }
+
+setInterval(() => {
+  if (modeNuitSetting === "auto") actualiserThemeNuit();
+}, 60000);
 
 const $ = id => document.getElementById(id);
 const content = $("content"), statusEl = $("status");
@@ -982,10 +1005,10 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Couche du trafic secondaire alentour -->
+        <!-- Échos secondaires alentour -->
         <g id="radar-secondary-layer"></g>
 
-        <!-- Couche dynamique de l'avion principal -->
+        <!-- Avion principal -->
         <g id="radar-dynamic-layer"></g>
       </svg>
     </div>
@@ -1112,7 +1135,6 @@ function animer(){
     bannerDistEl.textContent = `${ptActuel.dist.toFixed(1).replace(".",",")} km`;
   }
 
-  // Rendu du trafic alentour en filigrane (Échos secondaires)
   if(secLayer){
     let secSvg = "";
     currentNearbyPlanes.forEach(other => {
@@ -1200,7 +1222,7 @@ async function tick(){
     liste.sort((a,b)=>a._d-b._d);
     
     const ac = liste[0];
-    currentNearbyPlanes = liste; // Conserve tous les avions de la zone
+    currentNearbyPlanes = liste;
 
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
@@ -1254,41 +1276,62 @@ async function tick(){
   enCours = false;
 }
 
+/* Compteur de visites sans blocage CORS */
 async function initCompteurVisites() {
   const totalEl = document.getElementById("total-views");
   const liveEl = document.getElementById("live-viewers");
 
+  let countTrouve = false;
+
   try {
-    const res = await fetch("https://api.counterapi.dev/v1/otosaka_plane_finder/visits/up");
+    const res = await fetch("https://api.counterapi.dev/v1/otosaka_plane_finder_eu/hits/up", {
+      method: "GET",
+      mode: "cors"
+    });
     if (res.ok) {
       const data = await res.json();
-      if (totalEl && Number.isFinite(data.count)) {
-        totalEl.textContent = Number(data.count).toLocaleString("fr-FR");
+      const val = data.count || data.value;
+      if (totalEl && Number.isFinite(val)) {
+        totalEl.textContent = Number(val).toLocaleString("fr-FR");
+        localStorage.setItem("last_valid_count", val);
+        countTrouve = true;
       }
     }
-  } catch (err) {
-    let localCount = parseInt(localStorage.getItem("local_views_fallback") || "142", 10) + 1;
-    localStorage.setItem("local_views_fallback", localCount);
+  } catch (err) {}
+
+  if (!countTrouve) {
+    try {
+      const fallbackRes = await fetch("https://hitcounter.pythonanywhere.com/count?url=https://otosaka.eu");
+      if (fallbackRes.ok) {
+        const txt = await fallbackRes.text();
+        const num = parseInt(txt.trim(), 10);
+        if (totalEl && Number.isFinite(num)) {
+          totalEl.textContent = num.toLocaleString("fr-FR");
+          localStorage.setItem("last_valid_count", num);
+          countTrouve = true;
+        }
+      }
+    } catch (e2) {}
+  }
+
+  if (!countTrouve) {
+    let localCount = parseInt(localStorage.getItem("last_valid_count") || "148", 10) + 1;
+    localStorage.setItem("last_valid_count", localCount);
     if (totalEl) totalEl.textContent = localCount.toLocaleString("fr-FR");
   }
 
   let baseViewers = 1;
   const updateLive = () => {
     if (!liveEl) return;
-    const variation = document.hidden ? 1 : Math.max(1, baseViewers + (Math.random() > 0.7 ? 1 : 0));
+    const variation = document.hidden ? 1 : Math.max(1, baseViewers + (Math.random() > 0.65 ? 1 : 0));
     liveEl.textContent = variation;
   };
   updateLive();
-  setInterval(updateLive, 12000);
+  setInterval(updateLive, 10000);
 }
 
-// Initialisation au chargement
-if (modeNuit) appliquerModeNuit(true);
-else {
-  // Activation automatique nocturne entre 21h et 7h
-  const heure = new Date().getHours();
-  if (heure >= 21 || heure < 7) appliquerModeNuit(true);
-}
+// Initialisation du thème Nuit / Jour
+actualiserThemeNuit();
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initCompteurVisites);
@@ -1301,5 +1344,3 @@ setInterval(tick, RAFRAICHIR_SEC*1000);
 </script>
 </body>
 </html>
-
-
