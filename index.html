@@ -208,7 +208,7 @@ body.night-mode .plane-canvas{
   z-index:2;
 }
 
-/* Badge de Compagnie avec Logo */
+/* Badge Compagnie */
 .airline-badge{
   display:inline-flex;
   align-items:center;
@@ -459,8 +459,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+/* Fréquence réglée à 4 secondes */
 const RAYON_SCAN_KM = 90;
-const RAFRAICHIR_SEC = 5;
+const RAFRAICHIR_SEC = 4;
 
 let trajectoireHistory = {};
 try {
@@ -478,7 +479,7 @@ let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
-/* ===== Logos SVG vectoriels des compagnies ===== */
+/* Logos vectoriels */
 const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4" fill="#222"/></svg>`;
 const LOGO_AIRFRANCE = `<svg viewBox="0 0 24 24"><path d="M2 19L22 5L17 21L2 19Z" fill="#da291c"/></svg>`;
 const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12L12 2Z" fill="#ffd23f"/></svg>`;
@@ -487,41 +488,27 @@ const LOGO_TRANSAVIA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" s
 const LOGO_LUFTHANSA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#05164d"/><path d="M6 14C10 11 14 10 18 8C14 12 11 14 8 16Z" fill="#ffd23f"/></svg>`;
 const LOGO_GENERIC = `<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`;
 
-/* ===== Base Compagnies Aériennes (ICAO 3 lettres + IATA 2 lettres) ===== */
 const AIRLINES = {
-  // Vueling
   VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
   VY:  { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
-
-  // Air France
   AFR: { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   AF:  { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
   A5:  { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
-
-  // Ryanair
   RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   FR:  { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RK:  { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
-
-  // easyJet
   EZY: { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   U2:  { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   DS:  { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
-
-  // Transavia
   TVF: { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TO:  { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TRA: { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   HV:  { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
-
-  // Lufthansa
   DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
   LH:  { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
-
-  // Autres
   IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
@@ -554,10 +541,8 @@ const AIRLINES = {
 function resoudreCompagnie(callsign){
   if(!callsign) return null;
   const clean = callsign.trim().toUpperCase();
-  // 1. Essai 3 lettres (ICAO)
   const code3 = clean.substring(0, 3);
   if(AIRLINES[code3]) return AIRLINES[code3];
-  // 2. Essai 2 lettres (IATA)
   const code2 = clean.substring(0, 2);
   if(AIRLINES[code2]) return AIRLINES[code2];
   return null;
@@ -629,8 +614,6 @@ const AIRPORTS = {
   FSC: { ville: "Figari", nom: "Sud-Corse", lat: 41.5006, lon: 9.0978 },
   AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", lat: 41.9236, lon: 8.8025 },
   BIA: { ville: "Bastia", nom: "Poretta", lat: 42.5527, lon: 9.4837 },
-
-  // Aéroports européens fréquents
   HAJ: { ville: "Hanovre", nom: "Hannover Airport", lat: 52.4611, lon: 9.6850 },
   BCN: { ville: "Barcelone", nom: "El Prat", lat: 41.2974, lon: 2.0833 },
   MAD: { ville: "Madrid", nom: "Barajas", lat: 40.4839, lon: -3.5680 },
@@ -721,9 +704,7 @@ function calculerPourcentageVol(ac){
       return Math.min(Math.max(Math.round((fait / total) * 100), 5), 98);
     }
   }
-  // Estimation de repli pour afficher la barre même sans coordonnées GPS de départ
   if(arr?.lat){
-    const vitKmh = (typeof ac.gs === "number" && ac.gs > 40) ? ac.gs * 1.852 : 750;
     const resteKm = distanceKm(ac.lat, ac.lon, arr.lat, arr.lon);
     if(resteKm < 200) return 85;
     if(resteKm < 500) return 65;
@@ -1081,7 +1062,7 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Échos secondaires alentour -->
+        <!-- Échos secondaires -->
         <g id="radar-secondary-layer"></g>
 
         <!-- Avion principal -->
@@ -1103,7 +1084,6 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const eta = estimerHeureArrivee(ac);
   const pct = calculerPourcentageVol(ac);
 
-  // Recherche de la compagnie sur le vol puis sur l'indicatif
   const cie = resoudreCompagnie(nom);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
@@ -1124,10 +1104,10 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const progressHtml = pct !== null
     ? `<div class="progress-wrap">
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width:${pct}%"></div>
+          <div class="progress-bar-fill" id="live-progress-bar" style="width:${pct}%"></div>
         </div>
         <div class="progress-labels">
-          <span>${esc(dep.code)} (${pct}%)</span>
+          <span id="live-progress-text">${esc(dep.code)} (${pct}%)</span>
           <span>${esc(arr.code)}</span>
         </div>
       </div>`
@@ -1174,8 +1154,8 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       ${radarHtml}
       <div class="stats">
         <div class="stat"><div class="v" id="live-eta">${eta ? eta : "—"}<i>${eta ? "" : "N/D"}</i></div><div class="l">Arrivée estimée</div></div>
-        <div class="stat"><div class="v">${altM!==null?arrondi(altM):"—"}<i>${altM!==null?"m":""}</i></div><div class="l">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
-        <div class="stat"><div class="v">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
+        <div class="stat"><div class="v" id="live-alt">${altM!==null?arrondi(altM):"—"}<i>${altM!==null?"m":""}</i></div><div class="l" id="live-alt-sub">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
+        <div class="stat"><div class="v" id="live-speed">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
         <div class="stat"><div class="v" id="live-distance">—<i>km</i></div><div class="l">Distance de toi</div></div>
       </div>
     </div>
@@ -1277,6 +1257,7 @@ requestAnimationFrame(animer);
 
 let enCours = false;
 
+/* Boucle d'interrogation réseau toutes les 4 secondes avec rafraîchissement complet */
 async function tick(){
   if(enCours) return; enCours = true;
   let pos = lirePos();
@@ -1336,10 +1317,35 @@ async function tick(){
     } else if(zoomChanged){
       dessiner(ac, pos, ac._d, false);
     } else {
+      /* MISE À JOUR CONTINUE DES DONNÉES DE VOL TOUTES LES 4 SECONDES */
+      const alt = ac.alt_baro;
+      const altM = (typeof alt === "number") ? alt * 0.3048 : null;
+      const vitKmh = (typeof ac.gs === "number") ? ac.gs * 1.852 : null;
+      const eta = estimerHeureArrivee(ac);
+      const pct = calculerPourcentageVol(ac);
+
+      const altEl = document.getElementById("live-alt");
+      const altSubEl = document.getElementById("live-alt-sub");
+      if(altEl && altM !== null){
+        altEl.innerHTML = `${arrondi(altM)}<i>m</i>`;
+        if(altSubEl) altSubEl.textContent = `Altitude (${arrondi(alt)} ft)`;
+      }
+
+      const speedEl = document.getElementById("live-speed");
+      if(speedEl && vitKmh !== null){
+        speedEl.innerHTML = `${arrondi(vitKmh)}<i>km/h</i>`;
+      }
+
       const etaEl = document.getElementById("live-eta");
       if(etaEl){
-        const eta = estimerHeureArrivee(ac);
         etaEl.innerHTML = `${eta ? eta : "—"}<i>${eta ? "" : "N/D"}</i>`;
+      }
+
+      const barEl = document.getElementById("live-progress-bar");
+      const barTxtEl = document.getElementById("live-progress-text");
+      if(barEl && pct !== null){
+        barEl.style.width = `${pct}%`;
+        if(barTxtEl) barTxtEl.textContent = `${ac.origin} (${pct}%)`;
       }
     }
 
@@ -1353,7 +1359,7 @@ async function tick(){
   enCours = false;
 }
 
-/* Compteur de visites sans blocage CORS */
+/* Compteur de visites */
 async function initCompteurVisites() {
   const totalEl = document.getElementById("total-views");
   const liveEl = document.getElementById("live-viewers");
