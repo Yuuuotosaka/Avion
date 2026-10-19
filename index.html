@@ -208,7 +208,7 @@ body.night-mode .plane-canvas{
   z-index:2;
 }
 
-/* Badge Compagnie */
+/* Badge Compagnie avec Logo */
 .airline-badge{
   display:inline-flex;
   align-items:center;
@@ -217,11 +217,12 @@ body.night-mode .plane-canvas{
   font-weight:700;
   font-size:14px;
   letter-spacing:.06em;
-  padding:4px 10px;
+  padding:5px 12px;
   border-radius:6px;
   margin-bottom:6px;
   text-transform:uppercase;
-  box-shadow:0 2px 8px rgba(0,0,0,0.35);
+  box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  width:fit-content;
 }
 .airline-logo-icon{
   display:inline-flex;
@@ -233,7 +234,6 @@ body.night-mode .plane-canvas{
 .airline-logo-icon svg{
   width:100%;
   height:100%;
-  fill:currentColor;
 }
 
 .callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(52px,8.5vw,90px);line-height:.92;color:var(--sign);letter-spacing:.02em}
@@ -459,7 +459,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* Fréquence réglée à 4 secondes */
 const RAYON_SCAN_KM = 90;
 const RAFRAICHIR_SEC = 4;
 
@@ -479,57 +478,92 @@ let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
-/* Logos vectoriels */
-const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4" fill="#222"/></svg>`;
-const LOGO_AIRFRANCE = `<svg viewBox="0 0 24 24"><path d="M2 19L22 5L17 21L2 19Z" fill="#da291c"/></svg>`;
-const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12L12 2Z" fill="#ffd23f"/></svg>`;
-const LOGO_EASYJET = `<svg viewBox="0 0 24 24"><path d="M4 12L12 4L20 12L12 20Z" fill="#ff6600"/></svg>`;
-const LOGO_TRANSAVIA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#00d66c" stroke-width="3" fill="none"/></svg>`;
+/* Logos vectoriels précis */
+const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4.5" fill="#111"/></svg>`;
+const LOGO_AIRFRANCE = `<svg viewBox="0 0 24 24"><path d="M3 18 L21 6 L16 20 Z" fill="#da291c"/></svg>`;
+const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#0d2b70"/><path d="M7 14 C10 8 15 8 18 10 C14 13 10 14 7 14 Z" fill="#ffd23f"/></svg>`;
+const LOGO_EASYJET = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff6600"/><path d="M8 12 L16 8 L14 16 Z" fill="#fff"/></svg>`;
+const LOGO_TRANSAVIA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#00d66c" stroke-width="3" fill="none"/><circle cx="12" cy="12" r="3" fill="#00d66c"/></svg>`;
 const LOGO_LUFTHANSA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#05164d"/><path d="M6 14C10 11 14 10 18 8C14 12 11 14 8 16Z" fill="#ffd23f"/></svg>`;
-const LOGO_GENERIC = `<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`;
+const LOGO_GENERIC = `<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor"/></svg>`;
 
+/* Base de décodage des compagnies (codes ICAO 3 lettres + IATA 2 lettres) */
 const AIRLINES = {
-  VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
-  VY:  { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
+  // Vueling
+  VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#111", logo: LOGO_VUELING },
+  VY:  { nom: "Vueling Airlines", color: "#ffcc00", text: "#111", logo: LOGO_VUELING },
+
+  // Air France & Hop
   AFR: { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   AF:  { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
   A5:  { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
+
+  // Ryanair
   RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   FR:  { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RK:  { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+
+  // easyJet
   EZY: { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   U2:  { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   DS:  { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+
+  // Transavia
   TVF: { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TO:  { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TRA: { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   HV:  { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+
+  // Lufthansa
   DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
   LH:  { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
-  IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
-  IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
-  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
-  BA:  { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
-  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
-  KL:  { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
-  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
-  LX:  { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
-  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
-  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
-  TP:  { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
-  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
-  W6:  { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Volotea
   VOE: { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
   V7:  { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
+
+  // Wizz Air
+  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+  W6:  { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Iberia
+  IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+
+  // British Airways
+  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+  BA:  { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+
+  // KLM
+  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+  KL:  { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+
+  // Swiss
+  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+  LX:  { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+
+  // Brussels Airlines
+  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
+  SN:  { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
+
+  // TAP Air Portugal
+  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+  TP:  { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+
+  // Emirates & Qatar
   UAE: { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   EK:  { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   QTR: { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
   QR:  { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
+
+  // Turkish Airlines
   THY: { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   TK:  { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Maghreb
   DAH: { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   AH:  { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   TAR: { nom: "Tunisair", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
@@ -538,13 +572,22 @@ const AIRLINES = {
   AT:  { nom: "Royal Air Maroc", color: "#b91c1c", text: "#fff", logo: LOGO_GENERIC }
 };
 
-function resoudreCompagnie(callsign){
-  if(!callsign) return null;
-  const clean = callsign.trim().toUpperCase();
-  const code3 = clean.substring(0, 3);
-  if(AIRLINES[code3]) return AIRLINES[code3];
-  const code2 = clean.substring(0, 2);
-  if(AIRLINES[code2]) return AIRLINES[code2];
+/* Analyse multi-sources robuste de la compagnie */
+function resoudreCompagnie(ac){
+  if(!ac) return null;
+  const candidats = [ac.flight, ac.callsign, ac.r].filter(Boolean);
+
+  for(const str of candidats){
+    const clean = String(str).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if(clean.length >= 3){
+      const c3 = clean.substring(0, 3);
+      if(AIRLINES[c3]) return AIRLINES[c3];
+    }
+    if(clean.length >= 2){
+      const c2 = clean.substring(0, 2);
+      if(AIRLINES[c2]) return AIRLINES[c2];
+    }
+  }
   return null;
 }
 
@@ -887,7 +930,9 @@ async function chercherAvions(pos){
     if(Array.isArray(d) && typeof d[1] === "number" && typeof d[2] === "number"){
       const origin = (d[11] || "").trim().toUpperCase();
       const dest = (d[12] || "").trim().toUpperCase();
-      const flight = (d[16] || d[13] || "").trim();
+      const flightNum = (d[13] || "").trim();
+      const callsign = (d[16] || "").trim();
+      const flight = flightNum || callsign;
       const typeAppareil = (d[8] || "").toUpperCase().trim();
       const alt = d[4];
 
@@ -904,10 +949,11 @@ async function chercherAvions(pos){
           alt_baro: d[4],
           gs: d[5],
           t: typeAppareil,
-          r: d[9],
+          r: (d[9] || "").trim(),
           origin: origin,
           dest: dest,
-          flight: flight
+          flight: flight,
+          callsign: callsign
         });
       }
     }
@@ -1062,10 +1108,7 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Échos secondaires -->
         <g id="radar-secondary-layer"></g>
-
-        <!-- Avion principal -->
         <g id="radar-dynamic-layer"></g>
       </svg>
     </div>
@@ -1076,7 +1119,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
-  const nom = (ac.flight || ac.r || ac.hex || "Inconnu").trim();
+  const nom = (ac.flight || ac.callsign || ac.r || ac.hex || "Inconnu").trim();
   
   const nomCompletModele = traduireNomModele(ac.t);
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
@@ -1084,7 +1127,8 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const eta = estimerHeureArrivee(ac);
   const pct = calculerPourcentageVol(ac);
 
-  const cie = resoudreCompagnie(nom);
+  // Résolution multi-sources de la compagnie
+  const cie = resoudreCompagnie(ac);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
 
@@ -1099,7 +1143,10 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
         <span>${esc(cie.nom)}</span>
         <span class="airline-logo-icon">${cie.logo}</span>
        </div>`
-    : "";
+    : `<div class="airline-badge" style="background:#1b2747;color:var(--slate)">
+        <span>Vol commercial</span>
+        <span class="airline-logo-icon">${LOGO_GENERIC}</span>
+       </div>`;
 
   const progressHtml = pct !== null
     ? `<div class="progress-wrap">
@@ -1257,7 +1304,6 @@ requestAnimationFrame(animer);
 
 let enCours = false;
 
-/* Boucle d'interrogation réseau toutes les 4 secondes avec rafraîchissement complet */
 async function tick(){
   if(enCours) return; enCours = true;
   let pos = lirePos();
@@ -1317,7 +1363,6 @@ async function tick(){
     } else if(zoomChanged){
       dessiner(ac, pos, ac._d, false);
     } else {
-      /* MISE À JOUR CONTINUE DES DONNÉES DE VOL TOUTES LES 4 SECONDES */
       const alt = ac.alt_baro;
       const altM = (typeof alt === "number") ? alt * 0.3048 : null;
       const vitKmh = (typeof ac.gs === "number") ? ac.gs * 1.852 : null;
