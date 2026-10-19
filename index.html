@@ -208,18 +208,32 @@ body.night-mode .plane-canvas{
   z-index:2;
 }
 
+/* Badge de Compagnie avec Logo */
 .airline-badge{
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:8px;
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:13px;
+  font-size:14px;
   letter-spacing:.06em;
-  padding:2px 8px;
-  border-radius:4px;
-  margin-bottom:4px;
+  padding:4px 10px;
+  border-radius:6px;
+  margin-bottom:6px;
   text-transform:uppercase;
+  box-shadow:0 2px 8px rgba(0,0,0,0.35);
+}
+.airline-logo-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+}
+.airline-logo-icon svg{
+  width:100%;
+  height:100%;
+  fill:currentColor;
 }
 
 .callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(52px,8.5vw,90px);line-height:.92;color:var(--sign);letter-spacing:.02em}
@@ -464,37 +478,89 @@ let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
+/* ===== Logos SVG vectoriels des compagnies ===== */
+const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4" fill="#222"/></svg>`;
+const LOGO_AIRFRANCE = `<svg viewBox="0 0 24 24"><path d="M2 19L22 5L17 21L2 19Z" fill="#da291c"/></svg>`;
+const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12L12 2Z" fill="#ffd23f"/></svg>`;
+const LOGO_EASYJET = `<svg viewBox="0 0 24 24"><path d="M4 12L12 4L20 12L12 20Z" fill="#ff6600"/></svg>`;
+const LOGO_TRANSAVIA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#00d66c" stroke-width="3" fill="none"/></svg>`;
+const LOGO_LUFTHANSA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#05164d"/><path d="M6 14C10 11 14 10 18 8C14 12 11 14 8 16Z" fill="#ffd23f"/></svg>`;
+const LOGO_GENERIC = `<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`;
+
+/* ===== Base Compagnies Aériennes (ICAO 3 lettres + IATA 2 lettres) ===== */
 const AIRLINES = {
-  AFR: { nom: "Air France", color: "#002157", text: "#fff" },
-  HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff" },
-  TVF: { nom: "Transavia France", color: "#00d66c", text: "#000" },
-  TRA: { nom: "Transavia", color: "#00d66c", text: "#000" },
-  RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f" },
-  RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f" },
-  EZY: { nom: "easyJet", color: "#ff6600", text: "#fff" },
-  EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff" },
-  DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f" },
-  VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#000" },
-  IBE: { nom: "Iberia", color: "#d71920", text: "#fff" },
-  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff" },
-  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff" },
-  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff" },
-  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff" },
-  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff" },
-  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff" },
-  VOE: { nom: "Volotea", color: "#7a1315", text: "#fff" },
-  UAE: { nom: "Emirates", color: "#d71920", text: "#fff" },
-  QTR: { nom: "Qatar Airways", color: "#5c0632", text: "#fff" },
-  THY: { nom: "Turkish Airlines", color: "#c8102e", text: "#fff" },
-  DAH: { nom: "Air Algérie", color: "#c8102e", text: "#fff" },
-  TAR: { nom: "Tunisair", color: "#c8102e", text: "#fff" },
-  RAM: { nom: "Royal Air Maroc", color: "#b91c1c", text: "#fff" }
+  // Vueling
+  VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
+  VY:  { nom: "Vueling Airlines", color: "#ffcc00", text: "#000", logo: LOGO_VUELING },
+
+  // Air France
+  AFR: { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
+  AF:  { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
+  HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
+  A5:  { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
+
+  // Ryanair
+  RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+  FR:  { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+  RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+  RK:  { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+
+  // easyJet
+  EZY: { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+  U2:  { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+  EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+  DS:  { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+
+  // Transavia
+  TVF: { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+  TO:  { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+  TRA: { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+  HV:  { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+
+  // Lufthansa
+  DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
+  LH:  { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
+
+  // Autres
+  IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+  BA:  { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+  KL:  { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+  LX:  { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
+  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+  TP:  { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+  W6:  { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+  VOE: { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
+  V7:  { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
+  UAE: { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  EK:  { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  QTR: { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
+  QR:  { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
+  THY: { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  TK:  { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  DAH: { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  AH:  { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  TAR: { nom: "Tunisair", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  TU:  { nom: "Tunisair", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+  RAM: { nom: "Royal Air Maroc", color: "#b91c1c", text: "#fff", logo: LOGO_GENERIC },
+  AT:  { nom: "Royal Air Maroc", color: "#b91c1c", text: "#fff", logo: LOGO_GENERIC }
 };
 
 function resoudreCompagnie(callsign){
-  if(!callsign || callsign.length < 3) return null;
-  const prefix = callsign.substring(0, 3).toUpperCase();
-  return AIRLINES[prefix] || null;
+  if(!callsign) return null;
+  const clean = callsign.trim().toUpperCase();
+  // 1. Essai 3 lettres (ICAO)
+  const code3 = clean.substring(0, 3);
+  if(AIRLINES[code3]) return AIRLINES[code3];
+  // 2. Essai 2 lettres (IATA)
+  const code2 = clean.substring(0, 2);
+  if(AIRLINES[code2]) return AIRLINES[code2];
+  return null;
 }
 
 const MODEL_NAMES = {
@@ -563,12 +629,15 @@ const AIRPORTS = {
   FSC: { ville: "Figari", nom: "Sud-Corse", lat: 41.5006, lon: 9.0978 },
   AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", lat: 41.9236, lon: 8.8025 },
   BIA: { ville: "Bastia", nom: "Poretta", lat: 42.5527, lon: 9.4837 },
+
+  // Aéroports européens fréquents
+  HAJ: { ville: "Hanovre", nom: "Hannover Airport", lat: 52.4611, lon: 9.6850 },
+  BCN: { ville: "Barcelone", nom: "El Prat", lat: 41.2974, lon: 2.0833 },
+  MAD: { ville: "Madrid", nom: "Barajas", lat: 40.4839, lon: -3.5680 },
+  PMI: { ville: "Palma de Majorque", nom: "Son Sant Joan", lat: 39.5517, lon: 2.7388 },
   LHR: { ville: "Londres", nom: "Heathrow", lat: 51.4700, lon: -0.4543 },
   LGW: { ville: "Londres", nom: "Gatwick", lat: 51.1537, lon: -0.1821 },
   STN: { ville: "Londres", nom: "Stansted", lat: 51.8860, lon: 0.2389 },
-  MAD: { ville: "Madrid", nom: "Barajas", lat: 40.4839, lon: -3.5680 },
-  BCN: { ville: "Barcelone", nom: "El Prat", lat: 41.2974, lon: 2.0833 },
-  PMI: { ville: "Palma de Majorque", nom: "Son Sant Joan", lat: 39.5517, lon: 2.7388 },
   LIS: { ville: "Lisbonne", nom: "Humberto Delgado", lat: 38.7742, lon: -9.1342 },
   OPO: { ville: "Porto", nom: "Francisco Sá Carneiro", lat: 41.2481, lon: -8.6814 },
   FCO: { ville: "Rome", nom: "Fiumicino", lat: 41.8003, lon: 12.2389 },
@@ -580,6 +649,12 @@ const AIRPORTS = {
   AMS: { ville: "Amsterdam", nom: "Schiphol", lat: 52.3105, lon: 4.7683 },
   FRA: { ville: "Francfort", nom: "Main", lat: 50.0379, lon: 8.5622 },
   MUC: { ville: "Munich", nom: "Franz Josef Strauß", lat: 48.3537, lon: 11.7750 },
+  BER: { ville: "Berlin", nom: "Brandenburg", lat: 52.3667, lon: 13.5033 },
+  DUS: { ville: "Düsseldorf", nom: "Airport", lat: 51.2895, lon: 6.7668 },
+  HAM: { ville: "Hambourg", nom: "Airport", lat: 53.6304, lon: 9.9882 },
+  STR: { ville: "Stuttgart", nom: "Airport", lat: 48.6899, lon: 9.2220 },
+  VIE: { ville: "Vienne", nom: "Schwechat", lat: 48.1103, lon: 16.5697 },
+  DUB: { ville: "Dublin", nom: "Airport", lat: 53.4213, lon: -6.2701 },
   RAK: { ville: "Marrakech", nom: "Ménara", lat: 31.6069, lon: -8.0363 },
   ALG: { ville: "Alger", nom: "Houari Boumédiène", lat: 36.6910, lon: 3.2154 },
   TUN: { ville: "Tunis", nom: "Carthage", lat: 36.8510, lon: 10.2272 }
@@ -639,13 +714,22 @@ function estimerHeureArrivee(ac){
 function calculerPourcentageVol(ac){
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
-  if(!dep?.lat || !arr?.lat) return null;
-
-  const total = distanceKm(dep.lat, dep.lon, arr.lat, arr.lon);
-  const fait = distanceKm(dep.lat, dep.lon, ac.lat, ac.lon);
-  if(total <= 10) return null;
-  const pct = Math.min(Math.max(Math.round((fait / total) * 100), 5), 98);
-  return pct;
+  if(dep?.lat && arr?.lat){
+    const total = distanceKm(dep.lat, dep.lon, arr.lat, arr.lon);
+    const fait = distanceKm(dep.lat, dep.lon, ac.lat, ac.lon);
+    if(total > 10){
+      return Math.min(Math.max(Math.round((fait / total) * 100), 5), 98);
+    }
+  }
+  // Estimation de repli pour afficher la barre même sans coordonnées GPS de départ
+  if(arr?.lat){
+    const vitKmh = (typeof ac.gs === "number" && ac.gs > 40) ? ac.gs * 1.852 : 750;
+    const resteKm = distanceKm(ac.lat, ac.lon, arr.lat, arr.lon);
+    if(resteKm < 200) return 85;
+    if(resteKm < 500) return 65;
+    return 45;
+  }
+  return null;
 }
 
 function lirePos(){
@@ -685,7 +769,6 @@ function declencherGeolocalisation(){
   );
 }
 
-/* ===== Gestion du Mode Nuit : Auto + Manuel ===== */
 let modeNuitSetting = localStorage.getItem("cockpit_night_setting") || "auto";
 
 function estHeureDeNuit() {
@@ -732,7 +815,6 @@ setInterval(() => {
 
 const $ = id => document.getElementById(id);
 const content = $("content");
-/* Objet factice pour absorber les affectations de statut sans générer d'erreur */
 const statusEl = { set textContent(_) {} };
 
 $("cfg").onclick = () => $("settings").classList.toggle("open");
@@ -1013,14 +1095,16 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
   const vitKmh = (typeof ac.gs === "number") ? ac.gs*1.852 : null;
-  const nom = ac.flight || ac.r || ac.hex || "Inconnu";
+  const nom = (ac.flight || ac.r || ac.hex || "Inconnu").trim();
   
   const nomCompletModele = traduireNomModele(ac.t);
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
   const eta = estimerHeureArrivee(ac);
   const pct = calculerPourcentageVol(ac);
-  const cie = resoudreCompagnie(ac.flight);
+
+  // Recherche de la compagnie sur le vol puis sur l'indicatif
+  const cie = resoudreCompagnie(nom);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
 
@@ -1031,7 +1115,10 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const arr = formatAirport(ac.dest);
 
   const cieHtml = cie
-    ? `<div class="airline-badge" style="background:${cie.color};color:${cie.text}">✈ ${esc(cie.nom)}</div>`
+    ? `<div class="airline-badge" style="background:${cie.color};color:${cie.text}">
+        <span>${esc(cie.nom)}</span>
+        <span class="airline-logo-icon">${cie.logo}</span>
+       </div>`
     : "";
 
   const progressHtml = pct !== null
@@ -1266,6 +1353,7 @@ async function tick(){
   enCours = false;
 }
 
+/* Compteur de visites sans blocage CORS */
 async function initCompteurVisites() {
   const totalEl = document.getElementById("total-views");
   const liveEl = document.getElementById("live-viewers");
