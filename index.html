@@ -17,12 +17,21 @@
 <style>
 :root{
   --ink:#0b111e; --sky:#16223d; --line:#253557; --sign:#ffd23f; --cloud:#e8eef7; --slate:#8fa1c2; --cyan:#38bdf8;
+  --panel-bg:rgba(13,20,36,0.55); --radar-beam:#38bdf8;
 }
+
+/* Thème Nuit Cockpit Ambré */
+body.night-mode{
+  --ink:#080504; --sky:#1c1108; --line:#3d2514; --sign:#ff922b; --cloud:#f8e3d2; --slate:#b88b68; --cyan:#ffa94d;
+  --panel-bg:rgba(20,12,6,0.65); --radar-beam:#ff922b;
+}
+
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
 body{
   background:radial-gradient(1200px 700px at 70% -10%, var(--sky), var(--ink) 70%) fixed;
   color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:20px;
+  transition:background 0.8s ease, color 0.8s ease;
 }
 .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px;min-height:100%}
 
@@ -68,7 +77,7 @@ header{
 }
 
 #status{font-size:12px;color:var(--slate);font-family:'JetBrains Mono',monospace}
-.btn-group{display:flex;gap:8px;align-items:center}
+.btn-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 button{
   font:inherit;
   color:var(--cloud);
@@ -84,6 +93,13 @@ button{
 }
 button:hover{border-color:var(--slate);background:rgba(255,255,255,0.04)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-offset:2px}
+
+.btn-night.active{
+  background:rgba(255,146,43,0.14);
+  border-color:var(--sign);
+  color:var(--sign);
+  font-weight:600;
+}
 
 main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;transition:opacity 0.6s ease, transform 0.6s ease}
 @media (max-width:820px){
@@ -116,35 +132,24 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   border-radius:10px;
   padding:10px 14px;
 }
-.detection-banner .left-info{
-  display:flex;
-  align-items:center;
-  gap:10px;
+body.night-mode .detection-banner{
+  background:linear-gradient(90deg, rgba(255,146,43,0.12), rgba(35,20,10,0.5));
+  border-color:rgba(255,146,43,0.3);
 }
+.detection-banner .left-info{display:flex;align-items:center;gap:10px}
 .detection-banner .beacon{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:var(--cyan);
-  box-shadow:0 0 10px var(--cyan);
+  width:10px; height:10px; border-radius:50%;
+  background:var(--cyan); box-shadow:0 0 10px var(--cyan);
   animation:beaconPulse 1.8s ease-in-out infinite alternate;
 }
 @keyframes beaconPulse{
   0%{ opacity:0.4; transform:scale(0.85); }
   100%{ opacity:1; transform:scale(1.2); }
 }
-.detection-banner .text{
-  font-size:14px;
-  font-weight:500;
-  color:var(--cloud);
-  letter-spacing:.02em;
-}
+.detection-banner .text{font-size:14px;font-weight:500;color:var(--cloud);letter-spacing:.02em}
 .detection-banner .distance-tag{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:18px;
-  font-weight:700;
-  color:var(--sign);
-  letter-spacing:.04em;
+  font-size:18px; font-weight:700; color:var(--sign); letter-spacing:.04em;
 }
 
 .plane-canvas{
@@ -159,11 +164,14 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   justify-content:center;
   box-shadow:inset 0 0 35px rgba(0,0,0,0.65);
 }
+body.night-mode .plane-canvas{
+  background:linear-gradient(145deg, #180f08, #0a0604);
+}
 
 .wind-stream{
   position:absolute;
   width:1.5px;
-  background:linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.45), transparent);
+  background:linear-gradient(to bottom, transparent, var(--cyan), transparent);
   border-radius:2px;
   animation:windFlow linear infinite;
   pointer-events:none;
@@ -173,19 +181,6 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   30%{ opacity:0.8; }
   80%{ opacity:0.8; }
   100%{ transform:translateY(280px); opacity:0; }
-}
-
-.plane-canvas::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:linear-gradient(to bottom, transparent 0%, rgba(56,189,248,0.06) 50%, transparent 100%);
-  animation:hudScan 4s linear infinite;
-  pointer-events:none;
-}
-@keyframes hudScan{
-  0%{ transform:translateY(-100%); }
-  100%{ transform:translateY(100%); }
 }
 
 .plane-canvas svg.blueprint{
@@ -214,19 +209,37 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   z-index:2;
 }
 
-.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(56px,9vw,96px);line-height:.92;color:var(--sign);letter-spacing:.02em}
+.airline-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:.06em;
+  padding:2px 8px;
+  border-radius:4px;
+  margin-bottom:4px;
+  text-transform:uppercase;
+}
+
+.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(52px,8.5vw,90px);line-height:.92;color:var(--sign);letter-spacing:.02em}
 .model{font-size:20px;font-weight:500;color:var(--cloud);margin-top:2px}
 .model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
 
+/* Route & Timeline */
 .route-box{
   background:rgba(22,34,61,0.45);
   border:1px solid var(--line);
   border-radius:10px;
-  padding:12px 14px;
+  padding:14px 16px;
   margin-top:8px;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:10px;
+}
+body.night-mode .route-box{
+  background:rgba(28,17,8,0.5);
 }
 .route-main{
   font-family:'Barlow Condensed',sans-serif;
@@ -237,16 +250,37 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   align-items:center;
   gap:10px;
 }
-.route-arrow{
-  color:var(--sign);
-  font-size:20px;
-  animation:arrowSlide 2s ease-in-out infinite alternate;
-}
-@keyframes arrowSlide{
-  0%{ transform:translateX(0); }
-  100%{ transform:translateX(4px); }
-}
+.route-arrow{color:var(--sign);font-size:20px}
 .route-sub{font-size:13px;color:var(--slate);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* Timeline Progression de vol */
+.progress-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-top:2px;
+}
+.progress-bar-bg{
+  width:100%;
+  height:5px;
+  background:rgba(255,255,255,0.08);
+  border-radius:3px;
+  position:relative;
+  overflow:hidden;
+}
+.progress-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--cyan), var(--sign));
+  border-radius:3px;
+  transition:width 1s ease;
+}
+.progress-labels{
+  display:flex;
+  justify-content:space-between;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:var(--slate);
+}
 
 .right{display:flex;flex-direction:column;gap:16px}
 
@@ -261,6 +295,9 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   border:1px solid var(--line);
   box-shadow:0 0 28px rgba(0,0,0,0.5);
   overflow:hidden;
+}
+body.night-mode .radar-box{
+  background:radial-gradient(circle, #201309 0%, #090503 75%);
 }
 .radar-box svg{width:100%;height:100%}
 
@@ -330,11 +367,11 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   color:var(--slate);
   letter-spacing:.06em;
 }
-.traffic-item{
-  display:flex;
-  align-items:center;
-  gap:6px;
+body.night-mode .traffic-footer{
+  background:rgba(20,12,6,0.65);
+  border-color:rgba(61,37,20,0.5);
 }
+.traffic-item{display:flex;align-items:center;gap:6px}
 .traffic-val{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
@@ -343,11 +380,8 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   letter-spacing:.04em;
 }
 .dot-live{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:#10b981;
-  box-shadow:0 0 8px #10b981;
+  width:7px; height:7px; border-radius:50%;
+  background:#10b981; box-shadow:0 0 8px #10b981;
   animation:livePing 1.8s ease-in-out infinite alternate;
 }
 @keyframes livePing{
@@ -355,11 +389,8 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
   100%{ opacity:1; transform:scale(1.15); }
 }
 .dot-total{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--cyan);
-  opacity:0.8;
+  width:7px; height:7px; border-radius:50%;
+  background:var(--cyan); opacity:0.8;
 }
 </style>
 </head>
@@ -373,9 +404,12 @@ main{display:grid;grid-template-columns:1.05fr 1fr;gap:24px;align-items:stretch;
       </div>
       <div class="brand-sub">SURVEILLANCE RADAR DE PROXIMITÉ</div>
     </div>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span id="status">Démarrage…</span>
       <div class="btn-group">
+        <button id="btn-night" class="btn-night" type="button" title="Mode Nuit / Cockpit">
+          🌙 NUIT
+        </button>
         <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
           GPS
@@ -432,9 +466,45 @@ function sauverHistorique(){
 }
 
 let currentPlane = null;
+let currentNearbyPlanes = []; // Autres avions de la zone en filigrane
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
+/* ===== Base Compagnies Aériennes (Préfixes ICAO) ===== */
+const AIRLINES = {
+  AFR: { nom: "Air France", color: "#002157", text: "#fff" },
+  HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff" },
+  TVF: { nom: "Transavia France", color: "#00d66c", text: "#000" },
+  TRA: { nom: "Transavia", color: "#00d66c", text: "#000" },
+  RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f" },
+  RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f" },
+  EZY: { nom: "easyJet", color: "#ff6600", text: "#fff" },
+  EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff" },
+  DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f" },
+  VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#000" },
+  IBE: { nom: "Iberia", color: "#d71920", text: "#fff" },
+  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff" },
+  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff" },
+  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff" },
+  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff" },
+  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff" },
+  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff" },
+  VOE: { nom: "Volotea", color: "#7a1315", text: "#fff" },
+  UAE: { nom: "Emirates", color: "#d71920", text: "#fff" },
+  QTR: { nom: "Qatar Airways", color: "#5c0632", text: "#fff" },
+  THY: { nom: "Turkish Airlines", color: "#c8102e", text: "#fff" },
+  DAH: { nom: "Air Algérie", color: "#c8102e", text: "#fff" },
+  TAR: { nom: "Tunisair", color: "#c8102e", text: "#fff" },
+  RAM: { nom: "Royal Air Maroc", color: "#b91c1c", text: "#fff" }
+};
+
+function resoudreCompagnie(callsign){
+  if(!callsign || callsign.length < 3) return null;
+  const prefix = callsign.substring(0, 3).toUpperCase();
+  return AIRLINES[prefix] || null;
+}
+
+/* ===== Base étendue des modèles d'avions ===== */
 const MODEL_NAMES = {
   DR40: "Robin DR400", DR48: "Robin DR400 Regent", C172: "Cessna 172 Skyhawk", C182: "Cessna 182 Skylane",
   C152: "Cessna 152", C150: "Cessna 150", P28A: "Piper PA-28 Cherokee", PA28: "Piper PA-28 Archer",
@@ -574,6 +644,18 @@ function estimerHeureArrivee(ac){
   return `${h}h${m}`;
 }
 
+function calculerPourcentageVol(ac){
+  const dep = formatAirport(ac.origin);
+  const arr = formatAirport(ac.dest);
+  if(!dep?.lat || !arr?.lat) return null;
+
+  const total = distanceKm(dep.lat, dep.lon, arr.lat, arr.lon);
+  const fait = distanceKm(dep.lat, dep.lon, ac.lat, ac.lon);
+  if(total <= 10) return null;
+  const pct = Math.min(Math.max(Math.round((fait / total) * 100), 5), 98);
+  return pct;
+}
+
 function lirePos(){
   try{
     const p = JSON.parse(localStorage.getItem("pos")||"null");
@@ -615,12 +697,31 @@ function declencherGeolocalisation(){
   );
 }
 
+/* Gestion du Mode Nuit Cockpit */
+let modeNuit = localStorage.getItem("cockpit_night") === "true";
+function appliquerModeNuit(actif){
+  modeNuit = actif;
+  localStorage.setItem("cockpit_night", modeNuit);
+  const btn = $("btn-night");
+  if(modeNuit){
+    document.body.classList.add("night-mode");
+    if(btn) btn.classList.add("active");
+  } else {
+    document.body.classList.remove("night-mode");
+    if(btn) btn.classList.remove("active");
+  }
+}
+function toggleModeNuit(){
+  appliquerModeNuit(!modeNuit);
+}
+
 const $ = id => document.getElementById(id);
 const content = $("content"), statusEl = $("status");
 
 $("cfg").onclick = () => $("settings").classList.toggle("open");
 $("btn-gps").onclick = declencherGeolocalisation;
 $("btn-gps-settings").onclick = declencherGeolocalisation;
+$("btn-night").onclick = toggleModeNuit;
 
 $("save").onclick = () => {
   const lat = parseFloat($("lat").value.replace(",","."));
@@ -762,63 +863,63 @@ function genererSvgAvion(t){
 
   if(p.type === "LIGHT_PROP"){
     art = `
-      <ellipse cx="150" cy="54" rx="28" ry="4" fill="none" stroke="#ffd23f" stroke-dasharray="3 3" opacity="0.8"/>
-      <line x1="126" y1="54" x2="174" y2="54" stroke="#ffd23f" stroke-width="2.5"/>
-      <circle cx="150" cy="54" r="3.5" fill="#ffd23f"/>
+      <ellipse cx="150" cy="54" rx="28" ry="4" fill="none" stroke="var(--sign)" stroke-dasharray="3 3" opacity="0.8"/>
+      <line x1="126" y1="54" x2="174" y2="54" stroke="var(--sign)" stroke-width="2.5"/>
+      <circle cx="150" cy="54" r="3.5" fill="var(--sign)"/>
       <path d="M150 114 L265 126 L265 142 L160 142 L150 142 L140 142 L35 142 L35 126 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <path d="M150 226 L196 244 L196 250 L150 244 L104 250 L104 244 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 56 C158 56 161 78 161 130 L158 195 C158 222 154 246 150 250 C146 246 142 222 142 195 L139 130 C139 78 142 56 150 56 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
-      <path d="M145 92 C147 88 153 88 155 92 L157 122 L143 122 Z" fill="#38bdf8" opacity="0.55"/>
+      <path d="M150 56 C158 56 161 78 161 130 L158 195 C158 222 154 246 150 250 C146 246 142 222 142 195 L139 130 C139 78 142 56 150 56 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
+      <path d="M145 92 C147 88 153 88 155 92 L157 122 L143 122 Z" fill="var(--cyan)" opacity="0.55"/>
     `;
   } else if(p.type === "TURBOPROP"){
     art = `
       <path d="M150 112 L285 130 L285 142 L164 140 L150 140 L136 140 L15 142 L15 130 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <rect x="84" y="114" width="14" height="36" rx="3.5" fill="#1e2c4c" stroke="#8fa1c2" stroke-width="1.5"/>
       <rect x="202" y="114" width="14" height="36" rx="3.5" fill="#1e2c4c" stroke="#8fa1c2" stroke-width="1.5"/>
-      <ellipse cx="91" cy="114" rx="20" ry="4" fill="none" stroke="#ffd23f" stroke-width="2" stroke-dasharray="3 3"/>
-      <ellipse cx="209" cy="114" rx="20" ry="4" fill="none" stroke="#ffd23f" stroke-width="2" stroke-dasharray="3 3"/>
+      <ellipse cx="91" cy="114" rx="20" ry="4" fill="none" stroke="var(--sign)" stroke-width="2" stroke-dasharray="3 3"/>
+      <ellipse cx="209" cy="114" rx="20" ry="4" fill="none" stroke="var(--sign)" stroke-width="2" stroke-dasharray="3 3"/>
       <path d="M150 232 L206 246 L206 252 L150 246 L94 252 L94 246 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 54 C162 54 165 82 165 144 L165 204 C165 234 156 256 150 260 C144 256 135 234 135 204 L135 144 C135 82 138 54 150 54 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
+      <path d="M150 54 C162 54 165 82 165 144 L165 204 C165 234 156 256 150 260 C144 256 135 234 135 204 L135 144 C135 82 138 54 150 54 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
     `;
   } else if(p.type === "BIZJET"){
     art = `
       <path d="M150 120 L270 178 L264 186 L158 154 L150 154 L142 154 L36 186 L30 178 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <rect x="118" y="166" width="10" height="30" rx="3" fill="#ffd23f"/>
-      <rect x="172" y="166" width="10" height="30" rx="3" fill="#ffd23f"/>
+      <rect x="118" y="166" width="10" height="30" rx="3" fill="var(--sign)"/>
+      <rect x="172" y="166" width="10" height="30" rx="3" fill="var(--sign)"/>
       <path d="M150 230 L198 248 L198 254 L150 246 L102 254 L102 248 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 46 C160 46 163 76 163 138 L163 194 C163 226 154 254 150 258 C146 254 137 226 137 194 L137 138 C137 76 140 46 150 46 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
+      <path d="M150 46 C160 46 163 76 163 138 L163 194 C163 226 154 254 150 258 C146 254 137 226 137 194 L137 138 C137 76 140 46 150 46 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
     `;
   } else if(p.type === "HEAVY_QUAD"){
     art = `
       <path d="M150 110 L290 168 L290 180 L170 162 L150 162 L130 162 L10 180 L10 168 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <rect x="68" y="150" width="9" height="26" rx="3" fill="#ffd23f"/>
-      <rect x="100" y="140" width="9" height="26" rx="3" fill="#ffd23f"/>
-      <rect x="191" y="140" width="9" height="26" rx="3" fill="#ffd23f"/>
-      <rect x="223" y="150" width="9" height="26" rx="3" fill="#ffd23f"/>
+      <rect x="68" y="150" width="9" height="26" rx="3" fill="var(--sign)"/>
+      <rect x="100" y="140" width="9" height="26" rx="3" fill="var(--sign)"/>
+      <rect x="191" y="140" width="9" height="26" rx="3" fill="var(--sign)"/>
+      <rect x="223" y="150" width="9" height="26" rx="3" fill="var(--sign)"/>
       <path d="M150 220 L212 250 L212 256 L150 245 L88 256 L88 250 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 42 C168 42 172 75 172 136 L172 202 C172 234 158 260 150 264 C142 260 128 234 128 202 L128 136 C128 75 132 42 150 42 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
-      <line x1="10" y1="166" x2="10" y2="184" stroke="#ffd23f" stroke-width="3"/>
-      <line x1="290" y1="166" x2="290" y2="184" stroke="#ffd23f" stroke-width="3"/>
+      <path d="M150 42 C168 42 172 75 172 136 L172 202 C172 234 158 260 150 264 C142 260 128 234 128 202 L128 136 C128 75 132 42 150 42 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
+      <line x1="10" y1="166" x2="10" y2="184" stroke="var(--sign)" stroke-width="3"/>
+      <line x1="290" y1="166" x2="290" y2="184" stroke="var(--sign)" stroke-width="3"/>
     `;
   } else if(p.type === "WIDEBODY_TWIN"){
     art = `
       <path d="M150 114 L288 174 L284 185 L168 158 L150 158 L132 158 L16 185 L12 174 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <rect x="88" y="146" width="14" height="32" rx="4" fill="#ffd23f"/>
-      <rect x="198" y="146" width="14" height="32" rx="4" fill="#ffd23f"/>
+      <rect x="88" y="146" width="14" height="32" rx="4" fill="var(--sign)"/>
+      <rect x="198" y="146" width="14" height="32" rx="4" fill="var(--sign)"/>
       <path d="M150 224 L208 250 L208 256 L150 246 L92 256 L92 250 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 44 C166 44 168 76 168 140 L168 202 C168 234 156 260 150 264 C144 260 132 234 132 202 L132 140 C132 76 134 44 150 44 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
-      <path d="M12 174 Q8 168 10 162" stroke="#ffd23f" stroke-width="2" fill="none"/>
-      <path d="M288 174 Q292 168 290 162" stroke="#ffd23f" stroke-width="2" fill="none"/>
+      <path d="M150 44 C166 44 168 76 168 140 L168 202 C168 234 156 260 150 264 C144 260 132 234 132 202 L132 140 C132 76 134 44 150 44 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
+      <path d="M12 174 Q8 168 10 162" stroke="var(--sign)" stroke-width="2" fill="none"/>
+      <path d="M288 174 Q292 168 290 162" stroke="var(--sign)" stroke-width="2" fill="none"/>
     `;
   } else {
     art = `
       <path d="M150 118 L275 174 L272 184 L165 156 L150 156 L135 156 L28 184 L25 174 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <rect x="94" y="146" width="10" height="28" rx="3.5" fill="#ffd23f"/>
-      <rect x="196" y="146" width="10" height="28" rx="3.5" fill="#ffd23f"/>
+      <rect x="94" y="146" width="10" height="28" rx="3.5" fill="var(--sign)"/>
+      <rect x="196" y="146" width="10" height="28" rx="3.5" fill="var(--sign)"/>
       <path d="M150 224 L204 249 L204 255 L150 246 L96 255 L96 249 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
-      <path d="M150 48 C162 48 165 78 165 140 L165 200 C165 232 155 258 150 262 C145 258 135 232 135 200 L135 140 C135 78 138 48 150 48 Z" fill="#1b2847" stroke="#ffd23f" stroke-width="2"/>
-      <line x1="25" y1="172" x2="25" y2="186" stroke="#ffd23f" stroke-width="2.5"/>
-      <line x1="275" y1="172" x2="275" y2="186" stroke="#ffd23f" stroke-width="2.5"/>
+      <path d="M150 48 C162 48 165 78 165 140 L165 200 C165 232 155 258 150 262 C145 258 135 232 135 200 L135 140 C135 78 138 48 150 48 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
+      <line x1="25" y1="172" x2="25" y2="186" stroke="var(--sign)" stroke-width="2.5"/>
+      <line x1="275" y1="172" x2="275" y2="186" stroke="var(--sign)" stroke-width="2.5"/>
     `;
   }
 
@@ -853,9 +954,9 @@ function genererStructureRadar(maxKm){
       <svg viewBox="0 0 300 300">
         <defs>
           <linearGradient id="sweepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
-            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.05"/>
-            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+            <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.35"/>
+            <stop offset="60%" stop-color="var(--radar-beam)" stop-opacity="0.05"/>
+            <stop offset="100%" stop-color="var(--radar-beam)" stop-opacity="0"/>
           </linearGradient>
         </defs>
 
@@ -865,7 +966,7 @@ function genererStructureRadar(maxKm){
 
         <g class="radar-sweep">
           <path d="M150 150 L150 30 A120 120 0 0 1 235 65 Z" fill="url(#sweepGradient)"/>
-          <line x1="150" y1="150" x2="150" y2="30" stroke="#38bdf8" stroke-width="1.5" opacity="0.8"/>
+          <line x1="150" y1="150" x2="150" y2="30" stroke="var(--radar-beam)" stroke-width="1.5" opacity="0.8"/>
         </g>
 
         <line x1="150" y1="14" x2="150" y2="286" stroke="#253557" stroke-width="1" opacity="0.5"/>
@@ -874,13 +975,17 @@ function genererStructureRadar(maxKm){
           <text x="150" y="24">N</text><text x="282" y="153">E</text><text x="150" y="282">S</text><text x="18" y="153">O</text>
           <text id="radar-lbl-1" x="150" y="106" fill="#8fa1c2" opacity="0.6">${tier1} km</text>
           <text id="radar-lbl-2" x="150" y="66" fill="#8fa1c2" opacity="0.6">${tier2} km</text>
-          <text id="radar-lbl-3" x="150" y="26" fill="#ffd23f" opacity="0.75" font-size="9">${maxKm} km</text>
+          <text id="radar-lbl-3" x="150" y="26" fill="var(--sign)" opacity="0.75" font-size="9">${maxKm} km</text>
         </g>
 
-        <circle class="pulse-circle" cx="150" cy="150" r="4" fill="none" stroke="#38bdf8"/>
-        <circle cx="150" cy="150" r="4.5" fill="#38bdf8"/>
-        <circle cx="150" cy="150" r="9" fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.4"/>
+        <circle class="pulse-circle" cx="150" cy="150" r="4" fill="none" stroke="var(--cyan)"/>
+        <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
+        <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
+        <!-- Couche du trafic secondaire alentour -->
+        <g id="radar-secondary-layer"></g>
+
+        <!-- Couche dynamique de l'avion principal -->
         <g id="radar-dynamic-layer"></g>
       </svg>
     </div>
@@ -897,6 +1002,8 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
   const immat = ac.r ? ` — ${esc(ac.r)}` : "";
   const eta = estimerHeureArrivee(ac);
+  const pct = calculerPourcentageVol(ac);
+  const cie = resoudreCompagnie(ac.flight);
 
   currentRadarMaxKm = calculerEchelleRadar(dist);
 
@@ -905,6 +1012,22 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
 
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
+
+  const cieHtml = cie
+    ? `<div class="airline-badge" style="background:${cie.color};color:${cie.text}">✈ ${esc(cie.nom)}</div>`
+    : "";
+
+  const progressHtml = pct !== null
+    ? `<div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="progress-labels">
+          <span>${esc(dep.code)} (${pct}%)</span>
+          <span>${esc(arr.code)}</span>
+        </div>
+      </div>`
+    : "";
 
   const routeHtml = `
     <div class="route-box">
@@ -917,6 +1040,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
         <span><b>De :</b> <span id="apt-${esc(dep.code)}">${esc(dep.label)}</span></span>
         <span><b>Vers :</b> <span id="apt-${esc(arr.code)}">${esc(arr.label)}</span></span>
       </div>
+      ${progressHtml}
     </div>`;
 
   const bannerHtml = `
@@ -936,6 +1060,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       ${bannerHtml}
       ${drawingHtml}
       <div>
+        ${cieHtml}
         <div class="callsign">${esc(nom)}</div>
         <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
         ${routeHtml}
@@ -958,6 +1083,7 @@ function animer(){
   if(!currentPlane || !currentPos) return;
 
   const layer = document.getElementById("radar-dynamic-layer");
+  const secLayer = document.getElementById("radar-secondary-layer");
   if(!layer) return;
 
   const now = performance.now();
@@ -986,6 +1112,25 @@ function animer(){
     bannerDistEl.textContent = `${ptActuel.dist.toFixed(1).replace(".",",")} km`;
   }
 
+  // Rendu du trafic alentour en filigrane (Échos secondaires)
+  if(secLayer){
+    let secSvg = "";
+    currentNearbyPlanes.forEach(other => {
+      if(other.hex === currentPlane.hex) return;
+      const ptOther = projeterSurRadar(currentPos, other.lat, other.lon, currentRadarMaxKm);
+      const oTrack = typeof other.track === "number" ? other.track : 0;
+      secSvg += `
+        <g transform="translate(${ptOther.x.toFixed(1)}, ${ptOther.y.toFixed(1)})" opacity="0.38">
+          <g transform="rotate(${oTrack})">
+            <polygon points="0,-4 3,3 -3,3" fill="#8fa1c2"/>
+          </g>
+          <circle cx="0" cy="0" r="5" fill="none" stroke="#8fa1c2" stroke-width="0.8"/>
+        </g>
+      `;
+    });
+    secLayer.innerHTML = secSvg;
+  }
+
   const hex = currentPlane.hex;
   const hist = trajectoireHistory[hex] || [];
   let pointsTrajet = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon, currentRadarMaxKm));
@@ -1005,7 +1150,7 @@ function animer(){
   const polylineCoords = trajetComplet.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const pointsEtapes = trajetComplet.slice(0, -1).map((p, idx) => {
     const opac = (0.10 + (idx / trajetComplet.length) * 0.65).toFixed(2);
-    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#ffd23f" opacity="${opac}"/>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="var(--sign)" opacity="${opac}"/>`;
   }).join("");
 
   const futLen = 22;
@@ -1013,21 +1158,20 @@ function animer(){
   const futY = ptActuel.y - futLen * Math.cos(trackRad);
 
   layer.innerHTML = `
-    <polyline points="${polylineCoords}" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+    <polyline points="${polylineCoords}" fill="none" stroke="var(--sign)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
     ${pointsEtapes}
     <line x1="${ptActuel.x.toFixed(1)}" y1="${ptActuel.y.toFixed(1)}" x2="${futX.toFixed(1)}" y2="${futY.toFixed(1)}" 
-          stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
+          stroke="var(--sign)" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
     <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
       <g transform="rotate(${track})">
-        <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="#ffd23f"/>
+        <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="var(--sign)"/>
       </g>
-      <circle cx="0" cy="0" r="14" fill="none" stroke="#ffd23f" stroke-width="1.2" opacity="0.5"/>
+      <circle cx="0" cy="0" r="14" fill="none" stroke="var(--sign)" stroke-width="1.2" opacity="0.5"/>
     </g>
   `;
 }
 requestAnimationFrame(animer);
 
-/* Déclaration du verrou pour éviter l'erreur de référence */
 let enCours = false;
 
 async function tick(){
@@ -1046,6 +1190,7 @@ async function tick(){
 
     if(!liste.length){
       currentPlane = null;
+      currentNearbyPlanes = [];
       content.innerHTML = `<div class="empty">Aucun avion de ligne commercial avec itinéraire complet détecté à moins de ${RAYON_SCAN_KM} km pour le moment.</div>`;
       statusEl.textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
       enCours = false; return;
@@ -1053,7 +1198,9 @@ async function tick(){
 
     liste.forEach(a => a._d = distanceKm(pos.lat,pos.lon,a.lat,a.lon));
     liste.sort((a,b)=>a._d-b._d);
+    
     const ac = liste[0];
+    currentNearbyPlanes = liste; // Conserve tous les avions de la zone
 
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
@@ -1133,6 +1280,14 @@ async function initCompteurVisites() {
   };
   updateLive();
   setInterval(updateLive, 12000);
+}
+
+// Initialisation au chargement
+if (modeNuit) appliquerModeNuit(true);
+else {
+  // Activation automatique nocturne entre 21h et 7h
+  const heure = new Date().getHours();
+  if (heure >= 21 || heure < 7) appliquerModeNuit(true);
 }
 
 if (document.readyState === "loading") {
