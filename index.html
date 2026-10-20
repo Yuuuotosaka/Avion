@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flash-Éclair plane finder</title>
 
 <!-- Intégration PWA -->
@@ -26,10 +26,14 @@ body.night-mode{
 }
 
 *{box-sizing:border-box;margin:0}
-html,body{height:100%}
+html,body{
+  height:100%;
+  height:100dvh;
+  overflow:hidden; /* Verrouille tout micro-défilement */
+}
 body{
   background:radial-gradient(1400px 900px at 70% -10%, var(--sky), var(--ink) 70%) fixed;
-  color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:14px 20px;
+  color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:8px 16px;
   transition:background 0.8s ease, color 0.8s ease;
 }
 .wrap{
@@ -37,34 +41,35 @@ body{
   margin:0 auto;
   display:flex;
   flex-direction:column;
-  gap:12px;
-  min-height:100%;
+  gap:8px;
+  height:100%;
 }
 
 header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:16px;
+  gap:12px;
   border-bottom:1px solid rgba(255,255,255,0.06);
-  padding-bottom:10px;
+  padding-bottom:6px;
+  flex-shrink:0;
 }
-.brand{display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;flex-direction:column;gap:1px}
 .brand-title{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:26px;
+  font-size:22px;
   letter-spacing:.06em;
   color:var(--cloud);
   line-height:1;
 }
 .brand-title .highlight{color:var(--sign)}
 .brand-title .live-dot{
-  width:9px;
-  height:9px;
+  width:8px;
+  height:8px;
   border-radius:50%;
   background:var(--sign);
   box-shadow:0 0 10px var(--sign);
@@ -75,18 +80,19 @@ header{
   100%{ opacity:1; transform:scale(1.15); }
 }
 
-.btn-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 button{
   font:inherit;
   color:var(--cloud);
   background:transparent;
   border:1px solid var(--line);
-  border-radius:8px;
-  padding:6px 12px;
+  border-radius:6px;
+  padding:5px 10px;
+  font-size:13px;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:5px;
   transition:all .3s ease;
 }
 button:hover{border-color:var(--slate);background:rgba(255,255,255,0.04)}
@@ -102,13 +108,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-o
 main{
   display:grid;
   grid-template-columns:1.08fr 0.92fr;
-  gap:22px;
+  gap:16px;
   align-items:stretch;
   flex:1;
+  min-height:0; /* Clé pour laisser le contenu s'adapter à la hauteur */
   transition:opacity 0.6s ease, transform 0.6s ease;
 }
 @media (max-width:920px){
-  main{grid-template-columns:1fr;gap:18px}
+  main{grid-template-columns:1fr;gap:12px;overflow-y:auto}
 }
 
 .fade-out{
@@ -120,31 +127,33 @@ main{
   animation:arriveAvion 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 @keyframes arriveAvion{
-  0%{ opacity:0; transform:translateY(22px) scale(0.96); }
+  0%{ opacity:0; transform:translateY(16px) scale(0.96); }
   100%{ opacity:1; transform:translateY(0) scale(1); }
 }
 
 .col-left{
   display:flex;
   flex-direction:column;
-  gap:12px;
+  gap:8px;
   justify-content:space-between;
+  min-height:0;
 }
 
 .detection-banner{
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:2px;
   background:linear-gradient(90deg, rgba(56,189,248,0.12), rgba(27,39,71,0.4));
   border:1px solid rgba(56,189,248,0.28);
-  border-radius:10px;
-  padding:8px 14px;
-  box-shadow:0 0 16px rgba(56,189,248,0.06);
+  border-radius:8px;
+  padding:6px 12px;
+  box-shadow:0 0 12px rgba(56,189,248,0.06);
   animation:bannerBreath 4s ease-in-out infinite alternate;
+  flex-shrink:0;
 }
 @keyframes bannerBreath{
-  0%{ border-color:rgba(56,189,248,0.25); box-shadow:0 0 10px rgba(56,189,248,0.04); }
-  100%{ border-color:rgba(56,189,248,0.45); box-shadow:0 0 20px rgba(56,189,248,0.12); }
+  0%{ border-color:rgba(56,189,248,0.25); box-shadow:0 0 8px rgba(56,189,248,0.04); }
+  100%{ border-color:rgba(56,189,248,0.45); box-shadow:0 0 16px rgba(56,189,248,0.12); }
 }
 body.night-mode .detection-banner{
   background:linear-gradient(90deg, rgba(255,146,43,0.12), rgba(35,20,10,0.5));
@@ -154,11 +163,11 @@ body.night-mode .detection-banner{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap:10px;
 }
-.detection-banner .left-info{display:flex;align-items:center;gap:10px}
+.detection-banner .left-info{display:flex;align-items:center;gap:8px}
 .detection-banner .beacon{
-  width:10px; height:10px; border-radius:50%;
+  width:9px; height:9px; border-radius:50%;
   background:var(--cyan); box-shadow:0 0 10px var(--cyan);
   animation:beaconPulse 1.8s ease-in-out infinite alternate;
 }
@@ -166,18 +175,18 @@ body.night-mode .detection-banner{
   0%{ opacity:0.4; transform:scale(0.85); }
   100%{ opacity:1; transform:scale(1.2); }
 }
-.detection-banner .text{font-size:14px;font-weight:500;color:var(--cloud);letter-spacing:.02em}
+.detection-banner .text{font-size:13px;font-weight:500;color:var(--cloud);letter-spacing:.02em}
 .detection-banner .distance-tag{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:18px; font-weight:700; color:var(--sign); letter-spacing:.04em;
+  font-size:17px; font-weight:700; color:var(--sign); letter-spacing:.04em;
 }
 
 .cardinal-line{
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
+  font-size:10px;
   color:var(--cyan);
-  letter-spacing:.05em;
-  padding-left:20px;
+  letter-spacing:.04em;
+  padding-left:17px;
 }
 body.night-mode .cardinal-line{
   color:var(--sign);
@@ -186,22 +195,23 @@ body.night-mode .cardinal-line{
 .identity-block{
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:1px;
+  flex-shrink:0;
 }
 
 .airline-badge{
   display:inline-flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:15px;
+  font-size:13px;
   letter-spacing:.06em;
-  padding:4px 12px;
-  border-radius:6px;
-  margin-bottom:4px;
+  padding:3px 10px;
+  border-radius:5px;
+  margin-bottom:2px;
   text-transform:uppercase;
-  box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
   width:fit-content;
   animation:airlinePulse 3s ease-in-out infinite alternate;
 }
@@ -213,8 +223,8 @@ body.night-mode .cardinal-line{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:16px;
-  height:16px;
+  width:14px;
+  height:14px;
 }
 .airline-logo-icon svg{
   width:100%;
@@ -224,34 +234,35 @@ body.night-mode .cardinal-line{
 .callsign{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:800;
-  font-size:clamp(54px, 6.5vw, 84px);
-  line-height:.9;
+  font-size:clamp(44px, 5.2vw, 68px);
+  line-height:.88;
   color:var(--sign);
   letter-spacing:.02em;
-  text-shadow:0 0 25px rgba(255,210,63,0.18);
+  text-shadow:0 0 20px rgba(255,210,63,0.18);
 }
-.model{font-size:20px;font-weight:600;color:var(--cloud);margin-top:4px}
+.model{font-size:17px;font-weight:600;color:var(--cloud);margin-top:2px}
 .model small{
   display:inline-block;
-  margin-left:8px;
+  margin-left:6px;
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
+  font-size:10px;
   color:var(--slate);
   background:rgba(255,255,255,0.06);
-  padding:2px 6px;
+  padding:2px 5px;
   border-radius:4px;
 }
 
 .route-box{
   background:rgba(22,34,61,0.55);
   border:1px solid var(--line);
-  border-radius:12px;
-  padding:14px 18px;
+  border-radius:10px;
+  padding:10px 14px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:6px;
   position:relative;
   overflow:hidden;
+  flex-shrink:0;
 }
 body.night-mode .route-box{
   background:rgba(28,17,8,0.55);
@@ -259,16 +270,16 @@ body.night-mode .route-box{
 .route-main{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:42px;
+  font-size:36px;
   color:#fff;
   letter-spacing:.05em;
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:12px;
   line-height:1;
 }
 .route-flag{
-  font-size:28px;
+  font-size:24px;
   line-height:1;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
@@ -277,7 +288,7 @@ body.night-mode .route-box{
   align-items:center;
   justify-content:center;
   color:var(--sign);
-  font-size:32px;
+  font-size:26px;
   animation:arrowFlight 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 @keyframes arrowFlight{
@@ -287,39 +298,39 @@ body.night-mode .route-box{
 }
 
 .route-sub{
-  font-size:16px;
+  font-size:14px;
   font-weight:500;
   color:var(--cloud);
   display:flex;
   justify-content:space-between;
   flex-wrap:wrap;
-  gap:10px;
+  gap:6px;
 }
 .route-sub span{
   background:rgba(0,0,0,0.32);
-  padding:6px 12px;
-  border-radius:6px;
+  padding:4px 8px;
+  border-radius:5px;
   border-left:3px solid var(--sign);
 }
 
 .progress-wrap{
   display:flex;
   flex-direction:column;
-  gap:5px;
-  margin-top:4px;
+  gap:3px;
+  margin-top:2px;
 }
 .progress-bar-bg{
   width:100%;
-  height:7px;
+  height:6px;
   background:rgba(255,255,255,0.1);
-  border-radius:4px;
+  border-radius:3px;
   position:relative;
   overflow:hidden;
 }
 .progress-bar-fill{
   height:100%;
   background:linear-gradient(90deg, var(--cyan), var(--sign));
-  border-radius:4px;
+  border-radius:3px;
   transition:width 1s ease;
   position:relative;
 }
@@ -342,20 +353,21 @@ body.night-mode .route-box{
   display:flex;
   justify-content:space-between;
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
+  font-size:10px;
   font-weight:600;
   color:var(--slate);
 }
 .progress-subtext{
-  font-size:10px;
+  font-size:9.5px;
   color:var(--cyan);
   opacity:0.9;
   letter-spacing:.04em;
 }
 
+/* Format plus compact pour libérer de la hauteur */
 .plane-canvas{
-  aspect-ratio:16/7;
-  border-radius:12px;
+  aspect-ratio:16/6.2;
+  border-radius:10px;
   background:linear-gradient(145deg, #131c31, #0a0f1c);
   border:1px solid var(--line);
   position:relative;
@@ -363,7 +375,9 @@ body.night-mode .route-box{
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:inset 0 0 30px rgba(0,0,0,0.65);
+  box-shadow:inset 0 0 25px rgba(0,0,0,0.65);
+  flex-shrink:1;
+  min-height:90px;
 }
 body.night-mode .plane-canvas{
   background:linear-gradient(145deg, #180f08, #0a0604);
@@ -394,15 +408,15 @@ body.night-mode .plane-canvas{
 }
 
 .plane-canvas svg.blueprint{
-  width:82%; height:82%;
-  filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6));
+  width:80%; height:80%;
+  filter:drop-shadow(0 6px 14px rgba(0,0,0,0.6));
   animation:flightVibe 4.5s ease-in-out infinite alternate;
   z-index:1;
   transition:transform 1s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 @keyframes flightVibe{
   0%{ transform:translateY(0) rotate(0deg); }
-  50%{ transform:translateY(-3px) rotate(0.4deg); }
+  50%{ transform:translateY(-2px) rotate(0.4deg); }
   100%{ transform:translateY(2px) rotate(-0.3deg); }
 }
 
@@ -427,24 +441,25 @@ body.night-mode .plane-canvas{
 .nav-fixed-green{ filter:drop-shadow(0 0 4px #10b981); }
 
 .plane-hud-badge{
-  position:absolute; top:10px; left:12px;
-  font-family:'JetBrains Mono',monospace; font-size:10px;
+  position:absolute; top:8px; left:10px;
+  font-family:'JetBrains Mono',monospace; font-size:9px;
   color:var(--sign); background:rgba(11,17,30,0.85);
-  padding:2px 7px; border-radius:4px;
+  padding:2px 6px; border-radius:3px;
   border:1px solid rgba(255,210,63,0.3); letter-spacing:.08em;
   z-index:2;
 }
 .plane-hud-type{
-  position:absolute; bottom:10px; right:12px;
-  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--slate);
+  position:absolute; bottom:8px; right:10px;
+  font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--slate);
   z-index:2;
 }
 
 .col-right{
   display:flex;
   flex-direction:column;
-  gap:14px;
+  gap:8px;
   justify-content:space-between;
+  min-height:0;
 }
 
 .radar-wrapper{
@@ -453,18 +468,18 @@ body.night-mode .plane-canvas{
   align-items:center;
   justify-content:center;
   width:100%;
-  min-height:340px;
+  min-height:0; /* Ne force plus la colonne à déborder */
 }
 
 .radar-box{
   aspect-ratio:1;
   width:100%;
-  max-width:440px;
+  max-width:min(390px, 44vh); /* S'auto-adapte à la hauteur d'écran */
   position:relative;
   border-radius:50%;
   background:radial-gradient(circle, #13223f 0%, #0a1120 75%);
   border:1px solid var(--line);
-  box-shadow:0 0 32px rgba(0,0,0,0.55);
+  box-shadow:0 0 28px rgba(0,0,0,0.55);
   overflow:hidden;
 }
 body.night-mode .radar-box{
@@ -508,17 +523,18 @@ body.night-mode .radar-box{
 .stats{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
-  gap:10px;
+  gap:8px;
   width:100%;
+  flex-shrink:0;
 }
 @media (max-width:640px){
   .stats{grid-template-columns:1fr 1fr}
 }
 .stat{
-  padding:14px 12px;
+  padding:10px 8px;
   background:var(--panel-bg);
   border:1px solid var(--line);
-  border-radius:12px;
+  border-radius:10px;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -528,7 +544,7 @@ body.night-mode .radar-box{
 }
 .stat:hover{
   border-color:rgba(56,189,248,0.4);
-  transform:translateY(-2px);
+  transform:translateY(-1px);
 }
 .stat:nth-child(1){ animation-delay:0.1s; }
 .stat:nth-child(2){ animation-delay:0.2s; }
@@ -536,25 +552,25 @@ body.night-mode .radar-box{
 .stat:nth-child(4){ animation-delay:0.4s; }
 
 @keyframes statReveal{
-  0%{ opacity:0; transform:translateY(12px); }
+  0%{ opacity:0; transform:translateY(10px); }
   100%{ opacity:1; transform:translateY(0); }
 }
 
 .stat .v{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:36px;
+  font-size:32px;
   line-height:1;
   transition:color .3s ease;
 }
-.stat .v i{font-style:normal;font-size:14px;font-weight:500;color:var(--slate);margin-left:4px}
-.stat .l{font-size:11px;color:var(--slate);margin-top:6px;letter-spacing:.04em;text-transform:uppercase}
+.stat .v i{font-style:normal;font-size:13px;font-weight:500;color:var(--slate);margin-left:3px}
+.stat .l{font-size:10px;color:var(--slate);margin-top:4px;letter-spacing:.04em;text-transform:uppercase}
 
 .vario-tag{
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
+  font-size:10px;
   font-weight:600;
-  margin-top:4px;
+  margin-top:3px;
   display:flex;
   align-items:center;
   gap:4px;
@@ -563,16 +579,15 @@ body.night-mode .radar-box{
 .vario-down{color:#f59e0b}
 .vario-level{color:var(--slate)}
 
-/* Badge de phase de vol ATC */
 .phase-tag{
   font-family:'JetBrains Mono',monospace;
-  font-size:10px;
+  font-size:9.5px;
   font-weight:700;
-  padding:2px 6px;
-  border-radius:4px;
+  padding:2px 5px;
+  border-radius:3px;
   background:rgba(255,255,255,0.06);
   letter-spacing:.05em;
-  margin-top:3px;
+  margin-top:2px;
   width:fit-content;
 }
 .phase-cruise{ color:var(--cyan); border:1px solid rgba(56,189,248,0.3); }
@@ -589,24 +604,25 @@ body.night-mode .radar-box{
 
 .nearby-queue{
   display:flex;
-  gap:8px;
+  gap:6px;
   align-items:center;
   overflow-x:auto;
-  padding:4px 0 2px 0;
+  padding:2px 0;
+  flex-shrink:0;
 }
 .queue-item{
   background:rgba(22,34,61,0.45);
   border:1px solid var(--line);
-  border-radius:6px;
-  padding:5px 10px;
+  border-radius:5px;
+  padding:4px 8px;
   font-family:'JetBrains Mono',monospace;
-  font-size:11px;
+  font-size:10.5px;
   color:var(--slate);
   cursor:pointer;
   white-space:nowrap;
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:5px;
   transition:all .2s ease;
 }
 .queue-item:hover{
@@ -622,7 +638,7 @@ body.night-mode .radar-box{
 }
 .queue-label{
   font-family:'JetBrains Mono',monospace;
-  font-size:10px;
+  font-size:9.5px;
   color:var(--slate);
   text-transform:uppercase;
   letter-spacing:.06em;
@@ -633,8 +649,8 @@ body.night-mode .radar-box{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:24px;
-  padding:40px 20px;
+  gap:16px;
+  padding:20px;
   flex:1;
   animation:arriveAvion 1s ease forwards;
 }
@@ -642,33 +658,33 @@ body.night-mode .radar-box{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:8px;
+  gap:6px;
   text-align:center;
 }
 .tactical-title{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:24px;
+  font-size:20px;
   font-weight:700;
   color:var(--cloud);
   letter-spacing:.06em;
   text-transform:uppercase;
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
 }
 .tactical-sub{
   font-family:'JetBrains Mono',monospace;
-  font-size:12px;
+  font-size:11px;
   color:var(--slate);
   letter-spacing:.08em;
 }
 
-.empty{text-align:center;padding:60px 10px;color:var(--slate);font-size:19px;line-height:1.6;animation:arriveAvion 1s ease forwards}
-.settings{border:1px solid var(--line);border-radius:12px;padding:16px;display:none;gap:12px;flex-wrap:wrap;align-items:end;background:#0d1424aa}
+.empty{text-align:center;padding:40px 10px;color:var(--slate);font-size:17px;line-height:1.6;animation:arriveAvion 1s ease forwards}
+.settings{border:1px solid var(--line);border-radius:10px;padding:12px;display:none;gap:10px;flex-wrap:wrap;align-items:end;background:#0d1424aa}
 .settings.open{display:flex}
-.settings label{display:flex;flex-direction:column;font-size:13px;color:var(--slate);gap:4px}
-.settings input{font:inherit;color:var(--cloud);background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;width:170px}
-.settings .hint{flex-basis:100%;font-size:13px;color:var(--slate)}
+.settings label{display:flex;flex-direction:column;font-size:12px;color:var(--slate);gap:3px}
+.settings input{font:inherit;color:var(--cloud);background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;width:150px}
+.settings .hint{flex-basis:100%;font-size:12px;color:var(--slate)}
 .settings .go{background:var(--sign);color:var(--ink);border-color:var(--sign);font-weight:600}
 .btn-geo{background:rgba(56,189,248,0.1);border-color:var(--cyan);color:var(--cyan);font-weight:500}
 </style>
@@ -687,7 +703,7 @@ body.night-mode .radar-box{
         ☀️ 🔄
       </button>
       <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
         GPS
       </button>
       <button id="cfg" type="button">Coordonnées</button>
@@ -702,7 +718,7 @@ body.night-mode .radar-box{
     <p class="hint">Astuce : le bouton GPS remplit automatiquement tes coordonnées précises via le navigateur.</p>
   </section>
 
-  <div id="content"></div>
+  <div id="content" style="flex:1;min-height:0;display:flex;flex-direction:column;"></div>
 </div>
 
 <script>
@@ -1478,7 +1494,7 @@ function genererStructureRadar(maxKm){
 function genererEcranVeilleRadar(){
   return `
     <div class="tactical-idle">
-      <div class="radar-box" style="max-width:380px;">
+      <div class="radar-box" style="max-width:min(380px, 44vh);">
         <svg viewBox="0 0 300 300">
           <defs>
             <linearGradient id="sweepGradientIdle" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1569,7 +1585,7 @@ function genererMiniListeAttente(liste, acActuel){
   }).join("");
 
   return `
-    <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">
+    <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
       <span class="queue-label">Autres vols en approche (${liste.length}) :</span>
       <div class="nearby-queue">${items}</div>
     </div>
@@ -1814,30 +1830,25 @@ function animer(){
     `;
   }
 
-  /* 1. Vecteur de prédiction ATC (anticipation à 2 minutes) */
   const distKm2Min = (gsKmh / 60) * 2;
   const rPixelMax = 120;
   const predPixels = Math.min((distKm2Min / currentRadarMaxKm) * rPixelMax, 75);
   const predX = ptActuel.x + predPixels * Math.sin(trackRad);
   const predY = ptActuel.y - predPixels * Math.cos(trackRad);
 
-  /* 2. Rémanence cathodique phosphore (phosphor decay) liée au balayage 4.5s */
   const sweepPeriodMs = 4500;
   const sweepAngleDeg = ((now % sweepPeriodMs) / sweepPeriodMs) * 360;
   const angleDiff = ((sweepAngleDeg - ptActuel.azimut + 360) % 360);
   const phosphorDecay = Math.max(0.4, 1.25 - (angleDiff / 360) * 0.85);
 
   layer.innerHTML = `
-    <!-- Trace passée -->
     <polyline points="${polylineCoords}" fill="none" stroke="${couleurTrace}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
     ${pointsEtapes}
     
-    <!-- Vecteur ATC à 2 min -->
     <line x1="${ptActuel.x.toFixed(1)}" y1="${ptActuel.y.toFixed(1)}" x2="${predX.toFixed(1)}" y2="${predY.toFixed(1)}" 
           stroke="${couleurTrace}" stroke-width="1.8" stroke-dasharray="3 4" opacity="${(0.85 * phosphorDecay).toFixed(2)}"/>
     <circle cx="${predX.toFixed(1)}" cy="${predY.toFixed(1)}" r="2" fill="${couleurTrace}" opacity="${(0.7 * phosphorDecay).toFixed(2)}"/>
     
-    <!-- Cible avion avec éclat phosphore -->
     <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})" style="filter:drop-shadow(0 0 ${(4 * phosphorDecay).toFixed(1)}px ${couleurTrace});">
       <g transform="rotate(${track})">
         <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="${couleurTrace}" opacity="${phosphorDecay.toFixed(2)}"/>
