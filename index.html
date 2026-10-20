@@ -179,7 +179,6 @@ body.night-mode .detection-banner{
   font-size:18px; font-weight:700; color:var(--sign); letter-spacing:.04em;
 }
 
-/* Relèvement cardinal en langage clair */
 .cardinal-line{
   font-family:'JetBrains Mono',monospace;
   font-size:11px;
@@ -250,7 +249,6 @@ body.night-mode .cardinal-line{
   border-radius:4px;
 }
 
-/* Route avec drapeaux animés */
 .route-box{
   background:rgba(22,34,61,0.55);
   border:1px solid var(--line);
@@ -399,6 +397,31 @@ body.night-mode .plane-canvas{
   100%{ transform:translateY(2px) rotate(-0.3deg); }
 }
 
+/* Feux de navigation réglementaires */
+.nav-beacon{
+  animation:beaconFlash 1.2s infinite ease-in-out;
+}
+@keyframes beaconFlash{
+  0%, 75%, 100%{ opacity:0.25; filter:drop-shadow(0 0 1px #ef4444); }
+  85%{ opacity:1; filter:drop-shadow(0 0 7px #ef4444); }
+}
+
+.nav-strobe{
+  animation:strobeFlash 1.5s infinite steps(1, start);
+}
+@keyframes strobeFlash{
+  0%, 92%, 100%{ opacity:0; }
+  94%, 97%{ opacity:1; filter:drop-shadow(0 0 8px #ffffff); }
+  95%{ opacity:0; }
+}
+
+.nav-fixed-red{
+  filter:drop-shadow(0 0 4px #ef4444);
+}
+.nav-fixed-green{
+  filter:drop-shadow(0 0 4px #10b981);
+}
+
 .plane-hud-badge{
   position:absolute; top:10px; left:12px;
   font-family:'JetBrains Mono',monospace; font-size:10px;
@@ -454,6 +477,11 @@ body.night-mode .radar-box{
   100%{ transform:rotate(360deg); }
 }
 
+.radar-sweep-idle{
+  transform-origin:150px 150px;
+  animation:radarSweepAnim 8s linear infinite;
+}
+
 .pulse-circle{
   transform-origin:150px 150px;
   animation:radarPulse 2.8s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
@@ -463,7 +491,17 @@ body.night-mode .radar-box{
   100%{ r:120; opacity:0; stroke-width:0.5; }
 }
 
-/* Cartes métriques réactives */
+/* Veille militaire */
+.idle-radar-grid line{
+  stroke:#253557; stroke-dasharray:3 4; opacity:0.4;
+}
+.idle-radar-text{
+  font-family:'JetBrains Mono',monospace; font-size:9px; fill:var(--slate); letter-spacing:.08em;
+}
+.idle-center-cross{
+  stroke:var(--cyan); stroke-width:1; opacity:0.6;
+}
+
 .stats{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
@@ -509,7 +547,6 @@ body.night-mode .radar-box{
 .stat .v i{font-style:normal;font-size:14px;font-weight:500;color:var(--slate);margin-left:4px}
 .stat .l{font-size:11px;color:var(--slate);margin-top:6px;letter-spacing:.04em;text-transform:uppercase}
 
-/* Variomètre vertical */
 .vario-tag{
   font-family:'JetBrains Mono',monospace;
   font-size:11px;
@@ -529,6 +566,42 @@ body.night-mode .radar-box{
 @keyframes metricPulse{
   0%{ color:var(--cyan); text-shadow:0 0 10px var(--cyan); }
   100%{ color:inherit; text-shadow:none; }
+}
+
+/* Écran de veille tactique */
+.tactical-idle{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+  padding:40px 20px;
+  flex:1;
+  animation:arriveAvion 1s ease forwards;
+}
+.tactical-status{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  text-align:center;
+}
+.tactical-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:24px;
+  font-weight:700;
+  color:var(--cloud);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.tactical-sub{
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  color:var(--slate);
+  letter-spacing:.08em;
 }
 
 .empty{text-align:center;padding:60px 10px;color:var(--slate);font-size:19px;line-height:1.6;animation:arriveAvion 1s ease forwards}
@@ -599,8 +672,6 @@ let currentPlane = null;
 let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
-
-/* Historique vertical pour calcul du variomètre */
 let planeAltitudeHistory = {};
 
 const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4.5" fill="#111"/></svg>`;
@@ -809,7 +880,7 @@ async function resoudreAeroportEnLigne(code){
           }
           AIRPORTS[code] = { 
             ville: apt.city || apt.name, 
-            nom: apt.name,
+            nom: apt.name, 
             pays: flag,
             lat: parseFloat(apt.lat), 
             lon: parseFloat(apt.lon) 
@@ -952,7 +1023,6 @@ setInterval(() => {
 
 const $ = id => document.getElementById(id);
 const content = $("content");
-const statusEl = { set textContent(_) {} };
 
 $("cfg").onclick = () => $("settings").classList.toggle("open");
 $("btn-gps").onclick = declencherGeolocalisation;
@@ -1009,6 +1079,13 @@ function traduireCapEnTexte(cap){
   const dirs = ["le Nord", "le Nord-Est", "l'Est", "le Sud-Est", "le Sud", "le Sud-Ouest", "l'Ouest", "le Nord-Ouest"];
   const idx = Math.round(cap / 45) % 8;
   return ` • Cap vers ${dirs[idx]} (${Math.round(cap)}°)`;
+}
+
+function couleurSelonAltitude(altM){
+  if(typeof altM !== "number") return "var(--sign)";
+  if(altM < 3000) return "#38bdf8"; /* Basse altitude - Cyan */
+  if(altM < 8000) return "#ffd23f"; /* Moyenne altitude - Jaune ambre */
+  return "#e0e7ff";                 /* Haute altitude croisière - Blanc bleuté */
 }
 
 function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
@@ -1125,6 +1202,7 @@ function detecterProfil(t){
 function genererSvgAvion(t){
   const p = detecterProfil(t);
   let art = "";
+  let navLights = "";
 
   if(p.type === "LIGHT_PROP"){
     art = `
@@ -1136,6 +1214,13 @@ function genererSvgAvion(t){
       <path d="M150 56 C158 56 161 78 161 130 L158 195 C158 222 154 246 150 250 C146 246 142 222 142 195 L139 130 C139 78 142 56 150 56 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
       <path d="M145 92 C147 88 153 88 155 92 L157 122 L143 122 Z" fill="var(--cyan)" opacity="0.55"/>
     `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="35" cy="134" r="3" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="35" cy="134" r="3.5" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="265" cy="134" r="3" fill="#10b981"/>
+      <circle class="nav-strobe" cx="265" cy="134" r="3.5" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="140" r="3.5" fill="#ef4444"/>
+    `;
   } else if(p.type === "TURBOPROP"){
     art = `
       <path d="M150 112 L285 130 L285 142 L164 140 L150 140 L136 140 L15 142 L15 130 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
@@ -1146,6 +1231,13 @@ function genererSvgAvion(t){
       <path d="M150 232 L206 246 L206 252 L150 246 L94 252 L94 246 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <path d="M150 54 C162 54 165 82 165 144 L165 204 C165 234 156 256 150 260 C144 256 135 234 135 204 L135 144 C135 82 138 54 150 54 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
     `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="15" cy="136" r="3" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="15" cy="136" r="3.5" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="285" cy="136" r="3" fill="#10b981"/>
+      <circle class="nav-strobe" cx="285" cy="136" r="3.5" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="135" r="3.5" fill="#ef4444"/>
+    `;
   } else if(p.type === "BIZJET"){
     art = `
       <path d="M150 120 L270 178 L264 186 L158 154 L150 154 L142 154 L36 186 L30 178 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
@@ -1153,6 +1245,13 @@ function genererSvgAvion(t){
       <rect x="172" y="166" width="10" height="30" rx="3" fill="var(--sign)"/>
       <path d="M150 230 L198 248 L198 254 L150 246 L102 254 L102 248 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <path d="M150 46 C160 46 163 76 163 138 L163 194 C163 226 154 254 150 258 C146 254 137 226 137 194 L137 138 C137 76 140 46 150 46 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
+    `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="33" cy="182" r="3" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="33" cy="182" r="3.5" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="267" cy="182" r="3" fill="#10b981"/>
+      <circle class="nav-strobe" cx="267" cy="182" r="3.5" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="148" r="3.5" fill="#ef4444"/>
     `;
   } else if(p.type === "HEAVY_QUAD"){
     art = `
@@ -1166,6 +1265,13 @@ function genererSvgAvion(t){
       <line x1="10" y1="166" x2="10" y2="184" stroke="var(--sign)" stroke-width="3"/>
       <line x1="290" y1="166" x2="290" y2="184" stroke="var(--sign)" stroke-width="3"/>
     `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="10" cy="174" r="3.5" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="10" cy="174" r="4" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="290" cy="174" r="3.5" fill="#10b981"/>
+      <circle class="nav-strobe" cx="290" cy="174" r="4" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="138" r="4" fill="#ef4444"/>
+    `;
   } else if(p.type === "WIDEBODY_TWIN"){
     art = `
       <path d="M150 114 L288 174 L284 185 L168 158 L150 158 L132 158 L16 185 L12 174 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
@@ -1173,8 +1279,13 @@ function genererSvgAvion(t){
       <rect x="198" y="146" width="14" height="32" rx="4" fill="var(--sign)"/>
       <path d="M150 224 L208 250 L208 256 L150 246 L92 256 L92 250 Z" fill="#243456" stroke="#8fa1c2" stroke-width="1.8"/>
       <path d="M150 44 C166 44 168 76 168 140 L168 202 C168 234 156 260 150 264 C144 260 132 234 132 202 L132 140 C132 76 134 44 150 44 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
-      <path d="M12 174 Q8 168 10 162" stroke="var(--sign)" stroke-width="2" fill="none"/>
-      <path d="M288 174 Q292 168 290 162" stroke="var(--sign)" stroke-width="2" fill="none"/>
+    `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="14" cy="180" r="3.5" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="14" cy="180" r="4" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="286" cy="180" r="3.5" fill="#10b981"/>
+      <circle class="nav-strobe" cx="286" cy="180" r="4" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="144" r="4" fill="#ef4444"/>
     `;
   } else {
     art = `
@@ -1185,6 +1296,13 @@ function genererSvgAvion(t){
       <path d="M150 48 C162 48 165 78 165 140 L165 200 C165 232 155 258 150 262 C145 258 135 232 135 200 L135 140 C135 78 138 48 150 48 Z" fill="#1b2847" stroke="var(--sign)" stroke-width="2"/>
       <line x1="25" y1="172" x2="25" y2="186" stroke="var(--sign)" stroke-width="2.5"/>
       <line x1="275" y1="172" x2="275" y2="186" stroke="var(--sign)" stroke-width="2.5"/>
+    `;
+    navLights = `
+      <circle class="nav-fixed-red" cx="25" cy="179" r="3" fill="#ef4444"/>
+      <circle class="nav-strobe" cx="25" cy="179" r="3.5" fill="#ffffff"/>
+      <circle class="nav-fixed-green" cx="275" cy="179" r="3" fill="#10b981"/>
+      <circle class="nav-strobe" cx="275" cy="179" r="3.5" fill="#ffffff"/>
+      <circle class="nav-beacon" cx="150" cy="142" r="3.5" fill="#ef4444"/>
     `;
   }
 
@@ -1205,6 +1323,7 @@ function genererSvgAvion(t){
         <line x1="150" y1="10" x2="150" y2="290" stroke="#253557" stroke-dasharray="4 6" opacity="0.25"/>
         <line x1="10" y1="150" x2="290" y2="150" stroke="#253557" stroke-dasharray="4 6" opacity="0.25"/>
         <g>${art}</g>
+        <g id="nav-lights-layer">${navLights}</g>
       </svg>
     </div>
   `;
@@ -1247,11 +1366,65 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Échos secondaires -->
+        <!-- Contrail + Échos secondaires + Avion principal -->
+        <g id="radar-contrail-layer"></g>
         <g id="radar-secondary-layer"></g>
-        <!-- Avion principal -->
         <g id="radar-dynamic-layer"></g>
       </svg>
+    </div>
+  `;
+}
+
+function genererEcranVeilleRadar(){
+  return `
+    <div class="tactical-idle">
+      <div class="radar-box" style="max-width:380px;">
+        <svg viewBox="0 0 300 300">
+          <defs>
+            <linearGradient id="sweepGradientIdle" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.25"/>
+              <stop offset="70%" stop-color="var(--radar-beam)" stop-opacity="0.02"/>
+              <stop offset="100%" stop-color="var(--radar-beam)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <g class="idle-radar-grid">
+            <circle cx="150" cy="150" r="30" fill="none"/>
+            <circle cx="150" cy="150" r="60" fill="none"/>
+            <circle cx="150" cy="150" r="90" fill="none"/>
+            <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.5"/>
+            <line x1="150" y1="20" x2="150" y2="280"/>
+            <line x1="20" y1="150" x2="280" y2="150"/>
+            <line x1="58" y1="58" x2="242" y2="242"/>
+            <line x1="242" y1="58" x2="58" y2="242"/>
+          </g>
+
+          <g class="radar-sweep-idle">
+            <path d="M150 150 L150 30 A120 120 0 0 1 235 65 Z" fill="url(#sweepGradientIdle)"/>
+            <line x1="150" y1="150" x2="150" y2="30" stroke="var(--radar-beam)" stroke-width="1" opacity="0.6"/>
+          </g>
+
+          <circle class="pulse-circle" cx="150" cy="150" r="4" fill="none" stroke="var(--cyan)"/>
+          <line class="idle-center-cross" x1="144" y1="150" x2="156" y2="150"/>
+          <line class="idle-center-cross" x1="150" y1="144" x2="150" y2="156"/>
+
+          <g class="idle-radar-text" text-anchor="middle">
+            <text x="150" y="24">000°</text>
+            <text x="282" y="153">090°</text>
+            <text x="150" y="284">180°</text>
+            <text x="18" y="153">270°</text>
+            <text x="150" y="136" fill="var(--slate)" opacity="0.5">RAYON 90 KM</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="tactical-status">
+        <div class="tactical-title">
+          <span class="live-dot"></span>
+          VEILLE RADAR ACTIVE • ESPACE AÉRIEN LIBRE
+        </div>
+        <div class="tactical-sub">EN ATTENTE D'UN SURVOL COMMERCIAL AVEC TRAJET COMPLET</div>
+      </div>
     </div>
   `;
 }
@@ -1376,7 +1549,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ AVEC DRAPEAUX -->
       ${routeHtml}
 
-      <!-- 3. SCHÉMA VECTORIEL COMPACT EN BAS -->
+      <!-- 3. SCHÉMA VECTORIEL COMPACT EN BAS AVEC FEUX DE NAVIGATION -->
       ${drawingHtml}
     </div>
 
@@ -1404,6 +1577,7 @@ function animer(){
 
   const layer = document.getElementById("radar-dynamic-layer");
   const secLayer = document.getElementById("radar-secondary-layer");
+  const contrailLayer = document.getElementById("radar-contrail-layer");
   if(!layer) return;
 
   const now = performance.now();
@@ -1457,6 +1631,9 @@ function animer(){
     secLayer.innerHTML = secSvg;
   }
 
+  const altM = (typeof currentPlane.alt_baro === "number") ? currentPlane.alt_baro * 0.3048 : null;
+  const couleurTrace = couleurSelonAltitude(altM);
+
   const hex = currentPlane.hex;
   const hist = trajectoireHistory[hex] || [];
   let pointsTrajet = hist.map(pt => projeterSurRadar(currentPos, pt.lat, pt.lon, currentRadarMaxKm));
@@ -1475,24 +1652,35 @@ function animer(){
 
   const polylineCoords = trajetComplet.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const pointsEtapes = trajetComplet.slice(0, -1).map((p, idx) => {
-    const opac = (0.10 + (idx / trajetComplet.length) * 0.65).toFixed(2);
-    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="var(--sign)" opacity="${opac}"/>`;
+    const opac = (0.12 + (idx / trajetComplet.length) * 0.65).toFixed(2);
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="${couleurTrace}" opacity="${opac}"/>`;
   }).join("");
+
+  /* Traînée de condensation (contrail) */
+  if(contrailLayer){
+    const contrailLength = 28;
+    const cStartX = ptActuel.x - contrailLength * Math.sin(trackRad);
+    const cStartY = ptActuel.y + contrailLength * Math.cos(trackRad);
+    contrailLayer.innerHTML = `
+      <line x1="${cStartX.toFixed(1)}" y1="${cStartY.toFixed(1)}" x2="${ptActuel.x.toFixed(1)}" y2="${ptActuel.y.toFixed(1)}"
+            stroke="rgba(255,255,255,0.4)" stroke-width="4.5" stroke-linecap="round" opacity="0.35" filter="blur(1.5px)"/>
+    `;
+  }
 
   const futLen = 22;
   const futX = ptActuel.x + futLen * Math.sin(trackRad);
   const futY = ptActuel.y - futLen * Math.cos(trackRad);
 
   layer.innerHTML = `
-    <polyline points="${polylineCoords}" fill="none" stroke="var(--sign)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+    <polyline points="${polylineCoords}" fill="none" stroke="${couleurTrace}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
     ${pointsEtapes}
     <line x1="${ptActuel.x.toFixed(1)}" y1="${ptActuel.y.toFixed(1)}" x2="${futX.toFixed(1)}" y2="${futY.toFixed(1)}" 
-          stroke="var(--sign)" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
+          stroke="${couleurTrace}" stroke-width="1.8" stroke-dasharray="2 3" opacity="0.8"/>
     <g transform="translate(${ptActuel.x.toFixed(1)}, ${ptActuel.y.toFixed(1)})">
       <g transform="rotate(${track})">
-        <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="var(--sign)"/>
+        <path d="M0 -11 L6 5 L0 2 L-6 5 Z" fill="${couleurTrace}"/>
       </g>
-      <circle cx="0" cy="0" r="14" fill="none" stroke="var(--sign)" stroke-width="1.2" opacity="0.5"/>
+      <circle cx="0" cy="0" r="14" fill="none" stroke="${couleurTrace}" stroke-width="1.2" opacity="0.5"/>
     </g>
   `;
 }
@@ -1516,7 +1704,7 @@ async function tick(){
     if(!liste.length){
       currentPlane = null;
       currentNearbyPlanes = [];
-      content.innerHTML = `<div class="empty">Aucun avion de ligne commercial avec itinéraire complet détecté à moins de ${RAYON_SCAN_KM} km pour le moment.</div>`;
+      content.innerHTML = genererEcranVeilleRadar();
       enCours = false; return;
     }
 
