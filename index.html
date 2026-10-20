@@ -17,19 +17,19 @@
 <style>
 :root{
   --ink:#0b111e; --sky:#16223d; --line:#253557; --sign:#ffd23f; --cloud:#e8eef7; --slate:#8fa1c2; --cyan:#38bdf8;
-  --panel-bg:rgba(13,20,36,0.55); --radar-beam:#38bdf8;
+  --panel-bg:rgba(13,20,36,0.6); --radar-beam:#38bdf8;
 }
 
 body.night-mode{
   --ink:#080504; --sky:#1c1108; --line:#3d2514; --sign:#ff922b; --cloud:#f8e3d2; --slate:#b88b68; --cyan:#ffa94d;
-  --panel-bg:rgba(20,12,6,0.65); --radar-beam:#ff922b;
+  --panel-bg:rgba(20,12,6,0.7); --radar-beam:#ff922b;
 }
 
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
 body{
   background:radial-gradient(1400px 900px at 70% -10%, var(--sky), var(--ink) 70%) fixed;
-  color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:16px 24px;
+  color:var(--cloud); font-family:Barlow,system-ui,sans-serif; padding:14px 20px;
   transition:background 0.8s ease, color 0.8s ease;
 }
 .wrap{
@@ -89,7 +89,7 @@ button{
   background:transparent;
   border:1px solid var(--line);
   border-radius:8px;
-  padding:7px 12px;
+  padding:6px 12px;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
@@ -106,16 +106,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-o
   font-weight:600;
 }
 
+/* Grille 2 colonnes parfaitement proportionnée */
 main{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:28px;
+  grid-template-columns:1.08fr 0.92fr;
+  gap:22px;
   align-items:stretch;
   flex:1;
   transition:opacity 0.6s ease, transform 0.6s ease;
 }
-@media (max-width:900px){
-  main{grid-template-columns:1fr;gap:20px}
+@media (max-width:920px){
+  main{grid-template-columns:1fr;gap:18px}
 }
 
 .fade-out{
@@ -131,7 +132,7 @@ main{
   100%{ opacity:1; transform:translateY(0) scale(1); }
 }
 
-.left{
+.col-left{
   display:flex;
   flex-direction:column;
   gap:12px;
@@ -146,7 +147,7 @@ main{
   background:linear-gradient(90deg, rgba(56,189,248,0.12), rgba(27,39,71,0.4));
   border:1px solid rgba(56,189,248,0.28);
   border-radius:10px;
-  padding:9px 14px;
+  padding:8px 14px;
 }
 body.night-mode .detection-banner{
   background:linear-gradient(90deg, rgba(255,146,43,0.12), rgba(35,20,10,0.5));
@@ -252,7 +253,7 @@ body.night-mode .plane-canvas{
   height:100%;
 }
 
-.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(46px,5.4vw,70px);line-height:.92;color:var(--sign);letter-spacing:.02em}
+.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(46px,5.2vw,68px);line-height:.92;color:var(--sign);letter-spacing:.02em}
 .model{font-size:18px;font-weight:500;color:var(--cloud);margin-top:2px}
 .model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
 
@@ -261,10 +262,10 @@ body.night-mode .plane-canvas{
   background:rgba(22,34,61,0.55);
   border:1px solid var(--line);
   border-radius:12px;
-  padding:14px 18px;
+  padding:12px 16px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
 }
 body.night-mode .route-box{
   background:rgba(28,17,8,0.55);
@@ -272,14 +273,14 @@ body.night-mode .route-box{
 .route-main{
   font-family:'Barlow Condensed',sans-serif;
   font-weight:700;
-  font-size:36px;
+  font-size:38px;
   color:#fff;
   letter-spacing:.05em;
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:16px;
 }
-.route-arrow{color:var(--sign);font-size:26px}
+.route-arrow{color:var(--sign);font-size:28px}
 .route-sub{
   font-size:15px;
   font-weight:500;
@@ -288,11 +289,10 @@ body.night-mode .route-box{
   justify-content:space-between;
   flex-wrap:wrap;
   gap:10px;
-  line-height:1.3;
 }
 .route-sub span{
-  background:rgba(0,0,0,0.3);
-  padding:5px 10px;
+  background:rgba(0,0,0,0.32);
+  padding:6px 12px;
   border-radius:6px;
   border-left:3px solid var(--sign);
 }
@@ -326,12 +326,12 @@ body.night-mode .route-box{
   color:var(--slate);
 }
 
-/* Colonne droite : Radar centré avec grand format */
-.right{
+/* Colonne droite : Radar centré verticalement + 4 gros compteurs */
+.col-right{
   display:flex;
   flex-direction:column;
-  justify-content:space-between;
   gap:14px;
+  justify-content:space-between;
 }
 
 .radar-wrapper{
@@ -340,7 +340,7 @@ body.night-mode .route-box{
   align-items:center;
   justify-content:center;
   width:100%;
-  min-height:0;
+  min-height:340px;
 }
 
 .radar-box{
@@ -388,7 +388,7 @@ body.night-mode .radar-box{
   .stats{grid-template-columns:1fr 1fr}
 }
 .stat{
-  padding:15px 12px;
+  padding:14px 12px;
   background:var(--panel-bg);
   border:1px solid var(--line);
   border-radius:12px;
@@ -408,8 +408,8 @@ body.night-mode .radar-box{
   100%{ opacity:1; transform:translateY(0); }
 }
 
-.stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:38px;line-height:1}
-.stat .v i{font-style:normal;font-size:15px;font-weight:500;color:var(--slate);margin-left:4px}
+.stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:36px;line-height:1}
+.stat .v i{font-style:normal;font-size:14px;font-weight:500;color:var(--slate);margin-left:4px}
 .stat .l{font-size:11px;color:var(--slate);margin-top:6px;letter-spacing:.04em;text-transform:uppercase}
 
 .empty{text-align:center;padding:60px 10px;color:var(--slate);font-size:19px;line-height:1.6;animation:arriveAvion 1s ease forwards}
@@ -543,51 +543,91 @@ const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fi
 const LOGO_EASYJET = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ff6600"/><path d="M8 12 L16 8 L14 16 Z" fill="#fff"/></svg>`;
 const LOGO_TRANSAVIA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#00d66c" stroke-width="3" fill="none"/><circle cx="12" cy="12" r="3" fill="#00d66c"/></svg>`;
 const LOGO_LUFTHANSA = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#05164d"/><path d="M6 14C10 11 14 10 18 8C14 12 11 14 8 16Z" fill="#ffd23f"/></svg>`;
+const LOGO_NORWEGIAN = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#d81920"/><path d="M6 15 L12 9 L18 15 Z" fill="#fff"/></svg>`;
 const LOGO_GENERIC = `<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor"/></svg>`;
 
 const AIRLINES = {
+  // Norwegian
+  NOZ: { nom: "Norwegian", color: "#d81920", text: "#fff", logo: LOGO_NORWEGIAN },
+  NAX: { nom: "Norwegian Air", color: "#d81920", text: "#fff", logo: LOGO_NORWEGIAN },
+  DY:  { nom: "Norwegian", color: "#d81920", text: "#fff", logo: LOGO_NORWEGIAN },
+  D8:  { nom: "Norwegian", color: "#d81920", text: "#fff", logo: LOGO_NORWEGIAN },
+
+  // Vueling
   VLG: { nom: "Vueling Airlines", color: "#ffcc00", text: "#111", logo: LOGO_VUELING },
   VY:  { nom: "Vueling Airlines", color: "#ffcc00", text: "#111", logo: LOGO_VUELING },
+
+  // Air France & Hop
   AFR: { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   AF:  { nom: "Air France", color: "#002157", text: "#fff", logo: LOGO_AIRFRANCE },
   HOP: { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
   A5:  { nom: "Air France Hop", color: "#da291c", text: "#fff", logo: LOGO_AIRFRANCE },
+
+  // Ryanair
   RYR: { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   FR:  { nom: "Ryanair", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RYS: { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
   RK:  { nom: "Ryanair UK", color: "#0d2b70", text: "#ffd23f", logo: LOGO_RYANAIR },
+
+  // easyJet
   EZY: { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   U2:  { nom: "easyJet", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   EZS: { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
   DS:  { nom: "easyJet Switzerland", color: "#ff6600", text: "#fff", logo: LOGO_EASYJET },
+
+  // Transavia
   TVF: { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TO:  { nom: "Transavia France", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   TRA: { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
   HV:  { nom: "Transavia", color: "#00d66c", text: "#000", logo: LOGO_TRANSAVIA },
+
+  // Lufthansa
   DLH: { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
   LH:  { nom: "Lufthansa", color: "#05164d", text: "#ffd23f", logo: LOGO_LUFTHANSA },
-  IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
-  IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
-  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
-  BA:  { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
-  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
-  KL:  { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
-  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
-  LX:  { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
-  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
-  SN:  { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
-  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
-  TP:  { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
-  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
-  W6:  { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Volotea
   VOE: { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
   V7:  { nom: "Volotea", color: "#7a1315", text: "#fff", logo: LOGO_GENERIC },
+
+  // Wizz Air
+  WZZ: { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+  W6:  { nom: "Wizz Air", color: "#c6007e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Iberia
+  IBE: { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+  IB:  { nom: "Iberia", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
+
+  // British Airways
+  BAW: { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+  BA:  { nom: "British Airways", color: "#075aaa", text: "#fff", logo: LOGO_GENERIC },
+
+  // KLM
+  KLM: { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+  KL:  { nom: "KLM Royal Dutch", color: "#00a1de", text: "#fff", logo: LOGO_GENERIC },
+
+  // Swiss
+  SWR: { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+  LX:  { nom: "Swiss Intl Air Lines", color: "#e30613", text: "#fff", logo: LOGO_GENERIC },
+
+  // Brussels Airlines
+  BEL: { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
+  SN:  { nom: "Brussels Airlines", color: "#0c2340", text: "#fff", logo: LOGO_GENERIC },
+
+  // TAP Air Portugal
+  TAP: { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+  TP:  { nom: "TAP Air Portugal", color: "#008543", text: "#fff", logo: LOGO_GENERIC },
+
+  // Emirates & Qatar
   UAE: { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   EK:  { nom: "Emirates", color: "#d71920", text: "#fff", logo: LOGO_GENERIC },
   QTR: { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
   QR:  { nom: "Qatar Airways", color: "#5c0632", text: "#fff", logo: LOGO_GENERIC },
+
+  // Turkish Airlines
   THY: { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   TK:  { nom: "Turkish Airlines", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
+
+  // Maghreb
   DAH: { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   AH:  { nom: "Air Algérie", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
   TAR: { nom: "Tunisair", color: "#c8102e", text: "#fff", logo: LOGO_GENERIC },
@@ -680,6 +720,16 @@ const AIRPORTS = {
   FSC: { ville: "Figari", nom: "Sud-Corse", lat: 41.5006, lon: 9.0978 },
   AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", lat: 41.9236, lon: 8.8025 },
   BIA: { ville: "Bastia", nom: "Poretta", lat: 42.5527, lon: 9.4837 },
+
+  // Aéroports scandinaves et européens
+  OSL: { ville: "Oslo", nom: "Gardermoen", lat: 60.1975, lon: 11.1004 },
+  BGO: { ville: "Bergen", nom: "Flesland", lat: 60.2934, lon: 5.2181 },
+  SVG: { ville: "Stavanger", nom: "Sola", lat: 58.8768, lon: 5.6379 },
+  TRD: { ville: "Trondheim", nom: "Værnes", lat: 63.4578, lon: 10.9242 },
+  ARN: { ville: "Stockholm", nom: "Arlanda", lat: 59.6519, lon: 17.9186 },
+  GOT: { ville: "Göteborg", nom: "Landvetter", lat: 57.6628, lon: 12.2798 },
+  CPH: { ville: "Copenhague", nom: "Kastrup", lat: 55.6180, lon: 12.6560 },
+  HEL: { ville: "Helsinki", nom: "Vantaa", lat: 60.3172, lon: 24.9633 },
   HAJ: { ville: "Hanovre", nom: "Hannover Airport", lat: 52.4611, lon: 9.6850 },
   BCN: { ville: "Barcelone", nom: "El Prat", lat: 41.2974, lon: 2.0833 },
   MAD: { ville: "Madrid", nom: "Barajas", lat: 40.4839, lon: -3.5680 },
@@ -1131,10 +1181,7 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Échos secondaires -->
         <g id="radar-secondary-layer"></g>
-
-        <!-- Avion principal -->
         <g id="radar-dynamic-layer"></g>
       </svg>
     </div>
@@ -1212,17 +1259,18 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
 
   content.innerHTML = `
   <main class="${animClass}" id="main-container">
-    <div class="left">
+    <div class="col-left">
       ${bannerHtml}
       ${drawingHtml}
       <div>
         ${cieHtml}
         <div class="callsign">${esc(nom)}</div>
         <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
-        ${routeHtml}
       </div>
+      ${routeHtml}
     </div>
-    <div class="right">
+
+    <div class="col-right">
       <div class="radar-wrapper">
         ${radarHtml}
       </div>
