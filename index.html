@@ -74,13 +74,6 @@ header{
   0%{ opacity:0.35; transform:scale(0.85); }
   100%{ opacity:1; transform:scale(1.15); }
 }
-.brand-sub{
-  font-family:'JetBrains Mono',monospace;
-  font-size:11px;
-  color:var(--slate);
-  letter-spacing:.12em;
-  text-transform:uppercase;
-}
 
 .btn-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 button{
@@ -354,7 +347,6 @@ body.night-mode .route-box{
   color:var(--slate);
 }
 
-/* Schéma Blueprint compact avec Horizon Artificiel */
 .plane-canvas{
   aspect-ratio:16/7;
   border-radius:12px;
@@ -573,7 +565,6 @@ body.night-mode .radar-box{
   100%{ color:inherit; text-shadow:none; }
 }
 
-/* Mini-liste d'attente discrète */
 .nearby-queue{
   display:flex;
   gap:8px;
@@ -668,11 +659,10 @@ body.night-mode .radar-box{
         <span class="live-dot"></span>
         FLASH-ÉCLAIR <span class="highlight">PLANE FINDER</span>
       </div>
-      <div class="brand-sub">SURVEILLANCE RADAR DE PROXIMITÉ</div>
     </div>
     <div class="btn-group">
-      <button id="btn-night" class="btn-night" type="button" title="Mode Nuit / Cockpit">
-        🌙 AUTO
+      <button id="btn-night" class="btn-night" type="button" title="Mode Automatique">
+        ☀️ 🔄
       </button>
       <button id="btn-gps" class="btn-geo" type="button" title="Me géolocaliser">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
@@ -1038,10 +1028,16 @@ function actualiserThemeNuit() {
 
   if (modeNuitSetting === "auto") {
     actif = estHeureDeNuit();
-    if (btn) btn.textContent = actif ? "🌙 NUIT (AUTO)" : "☀️ JOUR (AUTO)";
+    if (btn) {
+      btn.textContent = actif ? "🌙 🔄" : "☀️ 🔄";
+      btn.title = "Mode Nuit (Automatique 17h-7h)";
+    }
   } else {
     actif = (modeNuitSetting === "true");
-    if (btn) btn.textContent = actif ? "🌙 NUIT (FORCÉ)" : "☀️ JOUR (FORCÉ)";
+    if (btn) {
+      btn.textContent = actif ? "🌙" : "☀️";
+      btn.title = actif ? "Mode Nuit (Forcé)" : "Mode Jour (Forcé)";
+    }
   }
 
   if (actif) {
