@@ -354,6 +354,7 @@ body.night-mode .route-box{
   color:var(--slate);
 }
 
+/* Schéma Blueprint compact avec Horizon Artificiel */
 .plane-canvas{
   aspect-ratio:16/7;
   border-radius:12px;
@@ -368,6 +369,15 @@ body.night-mode .route-box{
 }
 body.night-mode .plane-canvas{
   background:linear-gradient(145deg, #180f08, #0a0604);
+}
+
+.artificial-horizon{
+  position:absolute;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  opacity:0.35;
+  transition:transform 1s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 
 .wind-stream{
@@ -390,6 +400,7 @@ body.night-mode .plane-canvas{
   filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6));
   animation:flightVibe 4.5s ease-in-out infinite alternate;
   z-index:1;
+  transition:transform 1s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 @keyframes flightVibe{
   0%{ transform:translateY(0) rotate(0deg); }
@@ -397,7 +408,6 @@ body.night-mode .plane-canvas{
   100%{ transform:translateY(2px) rotate(-0.3deg); }
 }
 
-/* Feux de navigation réglementaires */
 .nav-beacon{
   animation:beaconFlash 1.2s infinite ease-in-out;
 }
@@ -415,12 +425,8 @@ body.night-mode .plane-canvas{
   95%{ opacity:0; }
 }
 
-.nav-fixed-red{
-  filter:drop-shadow(0 0 4px #ef4444);
-}
-.nav-fixed-green{
-  filter:drop-shadow(0 0 4px #10b981);
-}
+.nav-fixed-red{ filter:drop-shadow(0 0 4px #ef4444); }
+.nav-fixed-green{ filter:drop-shadow(0 0 4px #10b981); }
 
 .plane-hud-badge{
   position:absolute; top:10px; left:12px;
@@ -491,7 +497,6 @@ body.night-mode .radar-box{
   100%{ r:120; opacity:0; stroke-width:0.5; }
 }
 
-/* Veille militaire */
 .idle-radar-grid line{
   stroke:#253557; stroke-dasharray:3 4; opacity:0.4;
 }
@@ -568,7 +573,48 @@ body.night-mode .radar-box{
   100%{ color:inherit; text-shadow:none; }
 }
 
-/* Écran de veille tactique */
+/* Mini-liste d'attente discrète */
+.nearby-queue{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  overflow-x:auto;
+  padding:4px 0 2px 0;
+}
+.queue-item{
+  background:rgba(22,34,61,0.45);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:5px 10px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--slate);
+  cursor:pointer;
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  transition:all .2s ease;
+}
+.queue-item:hover{
+  border-color:var(--cyan);
+  color:var(--cloud);
+  background:rgba(56,189,248,0.12);
+}
+.queue-item.active{
+  border-color:var(--sign);
+  color:var(--sign);
+  background:rgba(255,210,63,0.12);
+  font-weight:600;
+}
+.queue-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:var(--slate);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
 .tactical-idle{
   display:flex;
   flex-direction:column;
@@ -670,6 +716,7 @@ function sauverHistorique(){
 
 let currentPlane = null;
 let currentNearbyPlanes = [];
+let selectedPlaneHex = null;
 let currentPos = null;
 let currentRadarMaxKm = 30;
 let planeAltitudeHistory = {};
@@ -823,6 +870,7 @@ const AIRPORTS = {
   AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", pays: "🇫🇷", lat: 41.9236, lon: 8.8025 },
   BIA: { ville: "Bastia", nom: "Poretta", pays: "🇫🇷", lat: 42.5527, lon: 9.4837 },
 
+  AHO: { ville: "Alghero", nom: "Fertilia", pays: "🇮🇹", lat: 40.6321, lon: 8.2908 },
   OSL: { ville: "Oslo", nom: "Gardermoen", pays: "🇳🇴", lat: 60.1975, lon: 11.1004 },
   BGO: { ville: "Bergen", nom: "Flesland", pays: "🇳🇴", lat: 60.2934, lon: 5.2181 },
   SVG: { ville: "Stavanger", nom: "Sola", pays: "🇳🇴", lat: 58.8768, lon: 5.6379 },
@@ -1083,9 +1131,9 @@ function traduireCapEnTexte(cap){
 
 function couleurSelonAltitude(altM){
   if(typeof altM !== "number") return "var(--sign)";
-  if(altM < 3000) return "#38bdf8"; /* Basse altitude - Cyan */
-  if(altM < 8000) return "#ffd23f"; /* Moyenne altitude - Jaune ambre */
-  return "#e0e7ff";                 /* Haute altitude croisière - Blanc bleuté */
+  if(altM < 3000) return "#38bdf8";
+  if(altM < 8000) return "#ffd23f";
+  return "#e0e7ff";
 }
 
 function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
@@ -1315,10 +1363,16 @@ function genererSvgAvion(t){
 
   return `
     <div class="plane-canvas">
+      <svg class="artificial-horizon" id="hud-horizon" viewBox="0 0 300 130">
+        <line x1="30" y1="65" x2="115" y2="65" stroke="var(--slate)" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <line x1="185" y1="65" x2="270" y2="65" stroke="var(--slate)" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <line x1="130" y1="50" x2="170" y2="50" stroke="var(--slate)" stroke-width="1" opacity="0.4"/>
+        <line x1="130" y1="80" x2="170" y2="80" stroke="var(--slate)" stroke-width="1" opacity="0.4"/>
+      </svg>
       ${windLines}
       <div class="plane-hud-badge">${esc(t || "AIRLINER")}</div>
       <div class="plane-hud-type">${esc(p.label)}</div>
-      <svg class="blueprint" viewBox="0 0 300 300">
+      <svg class="blueprint" id="blueprint-svg" viewBox="0 0 300 300">
         <circle cx="150" cy="150" r="135" fill="none" stroke="#253557" stroke-width="1" opacity="0.4"/>
         <line x1="150" y1="10" x2="150" y2="290" stroke="#253557" stroke-dasharray="4 6" opacity="0.25"/>
         <line x1="10" y1="150" x2="290" y2="150" stroke="#253557" stroke-dasharray="4 6" opacity="0.25"/>
@@ -1366,7 +1420,6 @@ function genererStructureRadar(maxKm){
         <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
         <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Contrail + Échos secondaires + Avion principal -->
         <g id="radar-contrail-layer"></g>
         <g id="radar-secondary-layer"></g>
         <g id="radar-dynamic-layer"></g>
@@ -1430,12 +1483,12 @@ function genererEcranVeilleRadar(){
 }
 
 function calculerVariometre(ac){
-  if(typeof ac.alt_baro !== "number") return { texte: "Palier", classe: "vario-level" };
+  if(typeof ac.alt_baro !== "number") return { texte: "Palier", classe: "vario-level", rate: 0 };
   const h = planeAltitudeHistory[ac.hex];
   const now = performance.now();
   if(!h || !h.lastTime){
     planeAltitudeHistory[ac.hex] = { alt: ac.alt_baro, lastTime: now, rate: 0 };
-    return { texte: "Palier", classe: "vario-level" };
+    return { texte: "Palier", classe: "vario-level", rate: 0 };
   }
 
   const dtSec = (now - h.lastTime) / 1000;
@@ -1447,12 +1500,39 @@ function calculerVariometre(ac){
 
   const r = planeAltitudeHistory[ac.hex].rate || 0;
   if(r > 150){
-    return { texte: `▲ +${r} ft/min`, classe: "vario-up" };
+    return { texte: `▲ +${r} ft/min`, classe: "vario-up", rate: r };
   } else if(r < -150){
-    return { texte: `▼ ${r} ft/min`, classe: "vario-down" };
+    return { texte: `▼ ${r} ft/min`, classe: "vario-down", rate: r };
   }
-  return { texte: "▶ Palier", classe: "vario-level" };
+  return { texte: "▶ Palier", classe: "vario-level", rate: 0 };
 }
+
+function genererMiniListeAttente(liste, acActuel){
+  if(!liste || liste.length <= 1) return "";
+  const items = liste.slice(0, 5).map(a => {
+    const isCur = a.hex === acActuel.hex;
+    const call = esc(a.flight || a.callsign || "Vol");
+    const distStr = a._d ? `${a._d.toFixed(0)} km` : "";
+    return `
+      <div class="queue-item ${isCur ? 'active' : ''}" onclick="selectionnerVolManuel('${a.hex}')">
+        <span>${call}</span>
+        <span style="opacity:0.6;">${distStr}</span>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">
+      <span class="queue-label">Autres vols en approche (${liste.length}) :</span>
+      <div class="nearby-queue">${items}</div>
+    </div>
+  `;
+}
+
+window.selectionnerVolManuel = function(hex){
+  selectedPlaneHex = hex;
+  tick();
+};
 
 function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
@@ -1462,7 +1542,6 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   
   const nomCompletModele = traduireNomModele(ac.t);
   const codeIcaoBadge = ac.t ? `<small>${esc(ac.t)}</small>` : "";
-  const immat = ac.r ? ` — ${esc(ac.r)}` : "";
   const eta = estimerHeureArrivee(ac);
   const pct = calculerPourcentageVol(ac);
 
@@ -1481,6 +1560,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const capTexte = traduireCapEnTexte(ac.track);
 
   const vario = calculerVariometre(ac);
+  const miniListeHtml = genererMiniListeAttente(currentNearbyPlanes, ac);
 
   const cieHtml = cie
     ? `<div class="airline-badge" style="background:${cie.color};color:${cie.text}">
@@ -1539,18 +1619,21 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
     <div class="col-left">
       ${bannerHtml}
       
-      <!-- 1. IDENTITÉ PRIORITAIRE DU VOL -->
+      <!-- 1. IDENTITÉ DU VOL SANS IMMATRICULATION -->
       <div class="identity-block">
         ${cieHtml}
         <div class="callsign">${esc(nom)}</div>
-        <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
+        <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}</div>
       </div>
 
-      <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ AVEC DRAPEAUX -->
+      <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ -->
       ${routeHtml}
 
-      <!-- 3. SCHÉMA VECTORIEL COMPACT EN BAS AVEC FEUX DE NAVIGATION -->
+      <!-- 3. SCHÉMA VECTORIEL AVEC ASSIETTE D'HORIZON DYNAMIQUE -->
       ${drawingHtml}
+
+      <!-- 4. MINI-LISTE DISCRÈTE D'APPROCHE -->
+      ${miniListeHtml}
     </div>
 
     <div class="col-right">
@@ -1569,6 +1652,20 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       </div>
     </div>
   </main>`;
+
+  ajusterHorizonDynamique(vario.rate);
+}
+
+function ajusterHorizonDynamique(rateFpm){
+  const bp = document.getElementById("blueprint-svg");
+  const hz = document.getElementById("hud-horizon");
+  if(!bp || !hz) return;
+
+  const pitchDeg = Math.max(Math.min((rateFpm / 2000) * 8, 12), -12);
+  const horizonShiftY = -pitchDeg * 2.2;
+
+  bp.style.transform = `scale(1) rotate(${pitchDeg * -0.5}deg) translateY(${-horizonShiftY * 0.4}px)`;
+  hz.style.transform = `translateY(${horizonShiftY}px)`;
 }
 
 function animer(){
@@ -1656,7 +1753,6 @@ function animer(){
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="${couleurTrace}" opacity="${opac}"/>`;
   }).join("");
 
-  /* Traînée de condensation (contrail) */
   if(contrailLayer){
     const contrailLength = 28;
     const cStartX = ptActuel.x - contrailLength * Math.sin(trackRad);
@@ -1704,6 +1800,7 @@ async function tick(){
     if(!liste.length){
       currentPlane = null;
       currentNearbyPlanes = [];
+      selectedPlaneHex = null;
       content.innerHTML = genererEcranVeilleRadar();
       enCours = false; return;
     }
@@ -1711,8 +1808,14 @@ async function tick(){
     liste.forEach(a => a._d = distanceKm(pos.lat,pos.lon,a.lat,a.lon));
     liste.sort((a,b)=>a._d-b._d);
     
-    const ac = liste[0];
     currentNearbyPlanes = liste;
+
+    let ac = liste[0];
+    if(selectedPlaneHex){
+      const choisi = liste.find(x => x.hex === selectedPlaneHex);
+      if(choisi) ac = choisi;
+      else selectedPlaneHex = null;
+    }
 
     if(!trajectoireHistory[ac.hex]) trajectoireHistory[ac.hex] = [];
     const hist = trajectoireHistory[ac.hex];
@@ -1768,6 +1871,8 @@ async function tick(){
         varioEl.className = `vario-tag ${vario.classe}`;
         varioEl.textContent = vario.texte;
       }
+
+      ajusterHorizonDynamique(vario.rate);
 
       const speedEl = document.getElementById("live-speed");
       if(speedEl && vitKmh !== null){
