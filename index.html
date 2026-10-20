@@ -106,6 +106,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-o
   font-weight:600;
 }
 
+/* Grille principale */
 main{
   display:grid;
   grid-template-columns:1.08fr 0.92fr;
@@ -147,6 +148,12 @@ main{
   border:1px solid rgba(56,189,248,0.28);
   border-radius:10px;
   padding:8px 14px;
+  box-shadow:0 0 16px rgba(56,189,248,0.06);
+  animation:bannerBreath 4s ease-in-out infinite alternate;
+}
+@keyframes bannerBreath{
+  0%{ border-color:rgba(56,189,248,0.25); box-shadow:0 0 10px rgba(56,189,248,0.04); }
+  100%{ border-color:rgba(56,189,248,0.45); box-shadow:0 0 20px rgba(56,189,248,0.12); }
 }
 body.night-mode .detection-banner{
   background:linear-gradient(90deg, rgba(255,146,43,0.12), rgba(35,20,10,0.5));
@@ -168,9 +175,176 @@ body.night-mode .detection-banner{
   font-size:18px; font-weight:700; color:var(--sign); letter-spacing:.04em;
 }
 
+.identity-block{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.airline-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:.06em;
+  padding:4px 12px;
+  border-radius:6px;
+  margin-bottom:4px;
+  text-transform:uppercase;
+  box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  width:fit-content;
+  animation:airlinePulse 3s ease-in-out infinite alternate;
+}
+@keyframes airlinePulse{
+  0%{ transform:scale(1); }
+  100%{ transform:scale(1.02); filter:brightness(1.08); }
+}
+.airline-logo-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+}
+.airline-logo-icon svg{
+  width:100%;
+  height:100%;
+}
+
+.callsign{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  font-size:clamp(54px, 6.5vw, 84px);
+  line-height:.9;
+  color:var(--sign);
+  letter-spacing:.02em;
+  text-shadow:0 0 25px rgba(255,210,63,0.18);
+}
+.model{font-size:20px;font-weight:600;color:var(--cloud);margin-top:4px}
+.model small{
+  display:inline-block;
+  margin-left:8px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--slate);
+  background:rgba(255,255,255,0.06);
+  padding:2px 6px;
+  border-radius:4px;
+}
+
+/* Route & Trajet animés */
+.route-box{
+  background:rgba(22,34,61,0.55);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:14px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  position:relative;
+  overflow:hidden;
+}
+body.night-mode .route-box{
+  background:rgba(28,17,8,0.55);
+}
+.route-main{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:42px;
+  color:#fff;
+  letter-spacing:.05em;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  line-height:1;
+}
+.route-airport{
+  display:inline-block;
+  transition:transform .3s ease;
+}
+.route-arrow-wrap{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--sign);
+  font-size:32px;
+  animation:arrowFlight 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+@keyframes arrowFlight{
+  0%{ transform:translateX(-3px) scale(0.95); opacity:0.8; }
+  50%{ transform:translateX(5px) scale(1.08); opacity:1; filter:drop-shadow(0 0 8px var(--sign)); }
+  100%{ transform:translateX(-3px) scale(0.95); opacity:0.8; }
+}
+
+.route-sub{
+  font-size:16px;
+  font-weight:500;
+  color:var(--cloud);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.route-sub span{
+  background:rgba(0,0,0,0.32);
+  padding:6px 12px;
+  border-radius:6px;
+  border-left:3px solid var(--sign);
+  transition:border-color .4s ease;
+}
+
+.progress-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  margin-top:4px;
+}
+.progress-bar-bg{
+  width:100%;
+  height:7px;
+  background:rgba(255,255,255,0.1);
+  border-radius:4px;
+  position:relative;
+  overflow:hidden;
+}
+.progress-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--cyan), var(--sign));
+  border-radius:4px;
+  transition:width 1s ease;
+  position:relative;
+}
+/* Rayon lumineux qui file sur la barre de progression */
+.progress-bar-fill::after{
+  content:'';
+  position:absolute;
+  top:0;
+  left:-40px;
+  width:40px;
+  height:100%;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+  animation:progressShine 2.5s ease-in-out infinite;
+}
+@keyframes progressShine{
+  0%{ left:-40px; }
+  100%{ left:100%; }
+}
+
+.progress-labels{
+  display:flex;
+  justify-content:space-between;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  font-weight:600;
+  color:var(--slate);
+}
+
+/* Schéma Blueprint compact */
 .plane-canvas{
-  aspect-ratio:16/9.2;
-  border-radius:14px;
+  aspect-ratio:16/7;
+  border-radius:12px;
   background:linear-gradient(145deg, #131c31, #0a0f1c);
   border:1px solid var(--line);
   position:relative;
@@ -178,7 +352,7 @@ body.night-mode .detection-banner{
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:inset 0 0 35px rgba(0,0,0,0.65);
+  box-shadow:inset 0 0 30px rgba(0,0,0,0.65);
 }
 body.night-mode .plane-canvas{
   background:linear-gradient(145deg, #180f08, #0a0604);
@@ -200,130 +374,32 @@ body.night-mode .plane-canvas{
 }
 
 .plane-canvas svg.blueprint{
-  width:88%; height:88%;
+  width:82%; height:82%;
   filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6));
   animation:flightVibe 4.5s ease-in-out infinite alternate;
   z-index:1;
 }
 @keyframes flightVibe{
   0%{ transform:translateY(0) rotate(0deg); }
-  50%{ transform:translateY(-4px) rotate(0.4deg); }
-  100%{ transform:translateY(3px) rotate(-0.3deg); }
+  50%{ transform:translateY(-3px) rotate(0.4deg); }
+  100%{ transform:translateY(2px) rotate(-0.3deg); }
 }
 
 .plane-hud-badge{
-  position:absolute; top:12px; left:14px;
-  font-family:'JetBrains Mono',monospace; font-size:11px;
+  position:absolute; top:10px; left:12px;
+  font-family:'JetBrains Mono',monospace; font-size:10px;
   color:var(--sign); background:rgba(11,17,30,0.85);
-  padding:3px 8px; border-radius:4px;
+  padding:2px 7px; border-radius:4px;
   border:1px solid rgba(255,210,63,0.3); letter-spacing:.08em;
   z-index:2;
 }
 .plane-hud-type{
-  position:absolute; bottom:12px; right:14px;
+  position:absolute; bottom:10px; right:12px;
   font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--slate);
   z-index:2;
 }
 
-.airline-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;
-  font-size:14px;
-  letter-spacing:.06em;
-  padding:4px 10px;
-  border-radius:6px;
-  margin-bottom:3px;
-  text-transform:uppercase;
-  box-shadow:0 2px 10px rgba(0,0,0,0.4);
-  width:fit-content;
-}
-.airline-logo-icon{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:16px;
-  height:16px;
-}
-.airline-logo-icon svg{
-  width:100%;
-  height:100%;
-}
-
-.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(46px,5.2vw,68px);line-height:.92;color:var(--sign);letter-spacing:.02em}
-.model{font-size:18px;font-weight:500;color:var(--cloud);margin-top:2px}
-.model small{display:inline-block;margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--slate);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
-
-.route-box{
-  background:rgba(22,34,61,0.55);
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:12px 16px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-body.night-mode .route-box{
-  background:rgba(28,17,8,0.55);
-}
-.route-main{
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;
-  font-size:38px;
-  color:#fff;
-  letter-spacing:.05em;
-  display:flex;
-  align-items:center;
-  gap:16px;
-}
-.route-arrow{color:var(--sign);font-size:28px}
-.route-sub{
-  font-size:15px;
-  font-weight:500;
-  color:var(--cloud);
-  display:flex;
-  justify-content:space-between;
-  flex-wrap:wrap;
-  gap:10px;
-}
-.route-sub span{
-  background:rgba(0,0,0,0.32);
-  padding:6px 12px;
-  border-radius:6px;
-  border-left:3px solid var(--sign);
-}
-
-.progress-wrap{
-  display:flex;
-  flex-direction:column;
-  gap:5px;
-  margin-top:4px;
-}
-.progress-bar-bg{
-  width:100%;
-  height:6px;
-  background:rgba(255,255,255,0.1);
-  border-radius:4px;
-  position:relative;
-  overflow:hidden;
-}
-.progress-bar-fill{
-  height:100%;
-  background:linear-gradient(90deg, var(--cyan), var(--sign));
-  border-radius:4px;
-  transition:width 1s ease;
-}
-.progress-labels{
-  display:flex;
-  justify-content:space-between;
-  font-family:'JetBrains Mono',monospace;
-  font-size:11px;
-  font-weight:600;
-  color:var(--slate);
-}
-
+/* Colonne droite : Radar centré + 4 gros compteurs */
 .col-right{
   display:flex;
   flex-direction:column;
@@ -374,6 +450,7 @@ body.night-mode .radar-box{
   100%{ r:120; opacity:0; stroke-width:0.5; }
 }
 
+/* Cartes métriques réactives */
 .stats{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
@@ -393,6 +470,11 @@ body.night-mode .radar-box{
   justify-content:center;
   opacity:0;
   animation:statReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition:border-color .3s ease, background-color .3s ease, transform .2s ease;
+}
+.stat:hover{
+  border-color:rgba(56,189,248,0.4);
+  transform:translateY(-2px);
 }
 .stat:nth-child(1){ animation-delay:0.1s; }
 .stat:nth-child(2){ animation-delay:0.2s; }
@@ -404,9 +486,24 @@ body.night-mode .radar-box{
   100%{ opacity:1; transform:translateY(0); }
 }
 
-.stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:36px;line-height:1}
+.stat .v{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:36px;
+  line-height:1;
+  transition:color .3s ease;
+}
 .stat .v i{font-style:normal;font-size:14px;font-weight:500;color:var(--slate);margin-left:4px}
 .stat .l{font-size:11px;color:var(--slate);margin-top:6px;letter-spacing:.04em;text-transform:uppercase}
+
+/* Flash de mise à jour des métriques */
+.metric-flash{
+  animation:metricPulse 0.5s ease-out;
+}
+@keyframes metricPulse{
+  0%{ color:var(--cyan); text-shadow:0 0 10px var(--cyan); }
+  100%{ color:inherit; text-shadow:none; }
+}
 
 .empty{text-align:center;padding:60px 10px;color:var(--slate);font-size:19px;line-height:1.6;animation:arriveAvion 1s ease forwards}
 .settings{border:1px solid var(--line);border-radius:12px;padding:16px;display:none;gap:12px;flex-wrap:wrap;align-items:end;background:#0d1424aa}
@@ -771,7 +868,6 @@ function declencherGeolocalisation(){
   );
 }
 
-/* Mode Nuit Automatique de 17h00 à 07h00 */
 let modeNuitSetting = localStorage.getItem("cockpit_night_setting") || "auto";
 
 function estHeureDeNuit() {
@@ -1143,9 +1239,9 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const routeHtml = `
     <div class="route-box">
       <div class="route-main">
-        <span>${esc(dep.code)}</span>
-        <span class="route-arrow">➔</span>
-        <span>${esc(arr.code)}</span>
+        <span class="route-airport">${esc(dep.code)}</span>
+        <span class="route-arrow-wrap">➔</span>
+        <span class="route-airport">${esc(arr.code)}</span>
       </div>
       <div class="route-sub">
         <span>De : <b id="apt-${esc(dep.code)}">${esc(dep.label)}</b></span>
@@ -1169,13 +1265,19 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   <main class="${animClass}" id="main-container">
     <div class="col-left">
       ${bannerHtml}
-      ${drawingHtml}
-      <div>
+      
+      <!-- 1. IDENTITÉ PRIORITAIRE DU VOL -->
+      <div class="identity-block">
         ${cieHtml}
         <div class="callsign">${esc(nom)}</div>
         <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
       </div>
+
+      <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ -->
       ${routeHtml}
+
+      <!-- 3. SCHÉMA VECTORIEL COMPACT EN BAS -->
+      ${drawingHtml}
     </div>
 
     <div class="col-right">
@@ -1356,12 +1458,18 @@ async function tick(){
       const altSubEl = document.getElementById("live-alt-sub");
       if(altEl && altM !== null){
         altEl.innerHTML = `${arrondi(altM)}<i>m</i>`;
+        altEl.classList.remove("metric-flash");
+        void altEl.offsetWidth;
+        altEl.classList.add("metric-flash");
         if(altSubEl) altSubEl.textContent = `Altitude (${arrondi(alt)} ft)`;
       }
 
       const speedEl = document.getElementById("live-speed");
       if(speedEl && vitKmh !== null){
         speedEl.innerHTML = `${arrondi(vitKmh)}<i>km/h</i>`;
+        speedEl.classList.remove("metric-flash");
+        void speedEl.offsetWidth;
+        speedEl.classList.add("metric-flash");
       }
 
       const etaEl = document.getElementById("live-eta");
