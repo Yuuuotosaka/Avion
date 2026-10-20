@@ -106,7 +106,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sign);outline-o
   font-weight:600;
 }
 
-/* Grille principale */
 main{
   display:grid;
   grid-template-columns:1.08fr 0.92fr;
@@ -141,9 +140,8 @@ main{
 
 .detection-banner{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  flex-direction:column;
+  gap:4px;
   background:linear-gradient(90deg, rgba(56,189,248,0.12), rgba(27,39,71,0.4));
   border:1px solid rgba(56,189,248,0.28);
   border-radius:10px;
@@ -159,6 +157,12 @@ body.night-mode .detection-banner{
   background:linear-gradient(90deg, rgba(255,146,43,0.12), rgba(35,20,10,0.5));
   border-color:rgba(255,146,43,0.3);
 }
+.detection-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
 .detection-banner .left-info{display:flex;align-items:center;gap:10px}
 .detection-banner .beacon{
   width:10px; height:10px; border-radius:50%;
@@ -173,6 +177,18 @@ body.night-mode .detection-banner{
 .detection-banner .distance-tag{
   font-family:'Barlow Condensed',sans-serif;
   font-size:18px; font-weight:700; color:var(--sign); letter-spacing:.04em;
+}
+
+/* Relèvement cardinal en langage clair */
+.cardinal-line{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--cyan);
+  letter-spacing:.05em;
+  padding-left:20px;
+}
+body.night-mode .cardinal-line{
+  color:var(--sign);
 }
 
 .identity-block{
@@ -234,7 +250,7 @@ body.night-mode .detection-banner{
   border-radius:4px;
 }
 
-/* Route & Trajet animés */
+/* Route avec drapeaux animés */
 .route-box{
   background:rgba(22,34,61,0.55);
   border:1px solid var(--line);
@@ -257,12 +273,13 @@ body.night-mode .route-box{
   letter-spacing:.05em;
   display:flex;
   align-items:center;
-  gap:18px;
+  gap:14px;
   line-height:1;
 }
-.route-airport{
-  display:inline-block;
-  transition:transform .3s ease;
+.route-flag{
+  font-size:28px;
+  line-height:1;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 .route-arrow-wrap{
   display:inline-flex;
@@ -292,7 +309,6 @@ body.night-mode .route-box{
   padding:6px 12px;
   border-radius:6px;
   border-left:3px solid var(--sign);
-  transition:border-color .4s ease;
 }
 
 .progress-wrap{
@@ -316,7 +332,6 @@ body.night-mode .route-box{
   transition:width 1s ease;
   position:relative;
 }
-/* Rayon lumineux qui file sur la barre de progression */
 .progress-bar-fill::after{
   content:'';
   position:absolute;
@@ -341,7 +356,6 @@ body.night-mode .route-box{
   color:var(--slate);
 }
 
-/* Schéma Blueprint compact */
 .plane-canvas{
   aspect-ratio:16/7;
   border-radius:12px;
@@ -399,7 +413,6 @@ body.night-mode .plane-canvas{
   z-index:2;
 }
 
-/* Colonne droite : Radar centré + 4 gros compteurs */
 .col-right{
   display:flex;
   flex-direction:column;
@@ -470,7 +483,7 @@ body.night-mode .radar-box{
   justify-content:center;
   opacity:0;
   animation:statReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition:border-color .3s ease, background-color .3s ease, transform .2s ease;
+  transition:border-color .3s ease, transform .2s ease;
 }
 .stat:hover{
   border-color:rgba(56,189,248,0.4);
@@ -496,7 +509,20 @@ body.night-mode .radar-box{
 .stat .v i{font-style:normal;font-size:14px;font-weight:500;color:var(--slate);margin-left:4px}
 .stat .l{font-size:11px;color:var(--slate);margin-top:6px;letter-spacing:.04em;text-transform:uppercase}
 
-/* Flash de mise à jour des métriques */
+/* Variomètre vertical */
+.vario-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  font-weight:600;
+  margin-top:4px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.vario-up{color:#10b981}
+.vario-down{color:#f59e0b}
+.vario-level{color:var(--slate)}
+
 .metric-flash{
   animation:metricPulse 0.5s ease-out;
 }
@@ -574,7 +600,9 @@ let currentNearbyPlanes = [];
 let currentPos = null;
 let currentRadarMaxKm = 30;
 
-/* Logos vectoriels */
+/* Historique vertical pour calcul du variomètre */
+let planeAltitudeHistory = {};
+
 const LOGO_VUELING = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffcc00"/><circle cx="12" cy="12" r="4.5" fill="#111"/></svg>`;
 const LOGO_AIRFRANCE = `<svg viewBox="0 0 24 24"><path d="M3 18 L21 6 L16 20 Z" fill="#da291c"/></svg>`;
 const LOGO_RYANAIR = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#0d2b70"/><path d="M7 14 C10 8 15 8 18 10 C14 13 10 14 7 14 Z" fill="#ffd23f"/></svg>`;
@@ -690,75 +718,75 @@ function traduireNomModele(codeIcao){
 }
 
 const AIRPORTS = {
-  CDG: { ville: "Paris", nom: "Charles de Gaulle", lat: 49.0097, lon: 2.5479 },
-  ORY: { ville: "Paris", nom: "Orly", lat: 48.7262, lon: 2.3652 },
-  BVA: { ville: "Paris-Beauvais", nom: "Tillé", lat: 49.4544, lon: 2.1128 },
-  LRH: { ville: "La Rochelle", nom: "Île de Ré", lat: 46.1792, lon: -1.1953 },
-  LYS: { ville: "Lyon", nom: "Saint-Exupéry", lat: 45.7256, lon: 5.0811 },
-  NCE: { ville: "Nice", nom: "Côte d'Azur", lat: 43.6653, lon: 7.2150 },
-  MRS: { ville: "Marseille", nom: "Provence", lat: 43.4393, lon: 5.2214 },
-  TLS: { ville: "Toulouse", nom: "Blagnac", lat: 43.6291, lon: 1.3638 },
-  BOD: { ville: "Bordeaux", nom: "Mérignac", lat: 44.8283, lon: -0.7156 },
-  NTE: { ville: "Nantes", nom: "Atlantique", lat: 47.1532, lon: -1.6107 },
-  LIL: { ville: "Lille", nom: "Lesquin", lat: 50.5619, lon: 3.0894 },
-  BSL: { ville: "Bâle-Mulhouse", nom: "EuroAirport", lat: 47.5896, lon: 7.5299 },
-  MLH: { ville: "Mulhouse", nom: "EuroAirport", lat: 47.5896, lon: 7.5299 },
-  SXB: { ville: "Strasbourg", nom: "Entzheim", lat: 48.5383, lon: 7.6282 },
-  MPL: { ville: "Montpellier", nom: "Méditerranée", lat: 43.5762, lon: 3.9630 },
-  BZR: { ville: "Béziers", nom: "Cap d'Agde", lat: 43.3236, lon: 3.3539 },
-  PGF: { ville: "Perpignan", nom: "Rivesaltes", lat: 42.7404, lon: 2.8707 },
-  CCF: { ville: "Carcassonne", nom: "Salvaza", lat: 43.2160, lon: 2.3061 },
-  FNI: { ville: "Nîmes", nom: "Alès-Camargue", lat: 43.7575, lon: 4.4164 },
-  AVN: { ville: "Avignon", nom: "Provence", lat: 43.9072, lon: 4.9020 },
-  TLN: { ville: "Toulon", nom: "Hyères", lat: 43.0973, lon: 6.1460 },
-  BIQ: { ville: "Biarritz", nom: "Pays Basque", lat: 43.4684, lon: -1.5233 },
-  PUF: { ville: "Pau", nom: "Pyrénées", lat: 43.3800, lon: -0.4186 },
-  LDE: { ville: "Tarbes-Lourdes", nom: "Pyrénées", lat: 43.1786, lon: -0.0064 },
-  EGC: { ville: "Bergerac", nom: "Dordogne-Périgord", lat: 44.8244, lon: 0.5186 },
-  PIS: { ville: "Poitiers", nom: "Biard", lat: 46.5875, lon: 0.3067 },
-  LIG: { ville: "Limoges", nom: "Bellegarde", lat: 45.8628, lon: 1.1803 },
-  CFE: { ville: "Clermont-Ferrand", nom: "Auvergne", lat: 45.7865, lon: 3.1689 },
-  RNS: { ville: "Rennes", nom: "Saint-Jacques", lat: 48.0692, lon: -1.7347 },
-  BES: { ville: "Brest", nom: "Bretagne", lat: 48.4478, lon: -4.4225 },
-  FSC: { ville: "Figari", nom: "Sud-Corse", lat: 41.5006, lon: 9.0978 },
-  AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", lat: 41.9236, lon: 8.8025 },
-  BIA: { ville: "Bastia", nom: "Poretta", lat: 42.5527, lon: 9.4837 },
+  CDG: { ville: "Paris", nom: "Charles de Gaulle", pays: "🇫🇷", lat: 49.0097, lon: 2.5479 },
+  ORY: { ville: "Paris", nom: "Orly", pays: "🇫🇷", lat: 48.7262, lon: 2.3652 },
+  BVA: { ville: "Paris-Beauvais", nom: "Tillé", pays: "🇫🇷", lat: 49.4544, lon: 2.1128 },
+  LRH: { ville: "La Rochelle", nom: "Île de Ré", pays: "🇫🇷", lat: 46.1792, lon: -1.1953 },
+  LYS: { ville: "Lyon", nom: "Saint-Exupéry", pays: "🇫🇷", lat: 45.7256, lon: 5.0811 },
+  NCE: { ville: "Nice", nom: "Côte d'Azur", pays: "🇫🇷", lat: 43.6653, lon: 7.2150 },
+  MRS: { ville: "Marseille", nom: "Provence", pays: "🇫🇷", lat: 43.4393, lon: 5.2214 },
+  TLS: { ville: "Toulouse", nom: "Blagnac", pays: "🇫🇷", lat: 43.6291, lon: 1.3638 },
+  BOD: { ville: "Bordeaux", nom: "Mérignac", pays: "🇫🇷", lat: 44.8283, lon: -0.7156 },
+  NTE: { ville: "Nantes", nom: "Atlantique", pays: "🇫🇷", lat: 47.1532, lon: -1.6107 },
+  LIL: { ville: "Lille", nom: "Lesquin", pays: "🇫🇷", lat: 50.5619, lon: 3.0894 },
+  BSL: { ville: "Bâle-Mulhouse", nom: "EuroAirport", pays: "🇫🇷", lat: 47.5896, lon: 7.5299 },
+  MLH: { ville: "Mulhouse", nom: "EuroAirport", pays: "🇫🇷", lat: 47.5896, lon: 7.5299 },
+  SXB: { ville: "Strasbourg", nom: "Entzheim", pays: "🇫🇷", lat: 48.5383, lon: 7.6282 },
+  MPL: { ville: "Montpellier", nom: "Méditerranée", pays: "🇫🇷", lat: 43.5762, lon: 3.9630 },
+  BZR: { ville: "Béziers", nom: "Cap d'Agde", pays: "🇫🇷", lat: 43.3236, lon: 3.3539 },
+  PGF: { ville: "Perpignan", nom: "Rivesaltes", pays: "🇫🇷", lat: 42.7404, lon: 2.8707 },
+  CCF: { ville: "Carcassonne", nom: "Salvaza", pays: "🇫🇷", lat: 43.2160, lon: 2.3061 },
+  FNI: { ville: "Nîmes", nom: "Alès-Camargue", pays: "🇫🇷", lat: 43.7575, lon: 4.4164 },
+  AVN: { ville: "Avignon", nom: "Provence", pays: "🇫🇷", lat: 43.9072, lon: 4.9020 },
+  TLN: { ville: "Toulon", nom: "Hyères", pays: "🇫🇷", lat: 43.0973, lon: 6.1460 },
+  BIQ: { ville: "Biarritz", nom: "Pays Basque", pays: "🇫🇷", lat: 43.4684, lon: -1.5233 },
+  PUF: { ville: "Pau", nom: "Pyrénées", pays: "🇫🇷", lat: 43.3800, lon: -0.4186 },
+  LDE: { ville: "Tarbes-Lourdes", nom: "Pyrénées", pays: "🇫🇷", lat: 43.1786, lon: -0.0064 },
+  EGC: { ville: "Bergerac", nom: "Dordogne-Périgord", pays: "🇫🇷", lat: 44.8244, lon: 0.5186 },
+  PIS: { ville: "Poitiers", nom: "Biard", pays: "🇫🇷", lat: 46.5875, lon: 0.3067 },
+  LIG: { ville: "Limoges", nom: "Bellegarde", pays: "🇫🇷", lat: 45.8628, lon: 1.1803 },
+  CFE: { ville: "Clermont-Ferrand", nom: "Auvergne", pays: "🇫🇷", lat: 45.7865, lon: 3.1689 },
+  RNS: { ville: "Rennes", nom: "Saint-Jacques", pays: "🇫🇷", lat: 48.0692, lon: -1.7347 },
+  BES: { ville: "Brest", nom: "Bretagne", pays: "🇫🇷", lat: 48.4478, lon: -4.4225 },
+  FSC: { ville: "Figari", nom: "Sud-Corse", pays: "🇫🇷", lat: 41.5006, lon: 9.0978 },
+  AJA: { ville: "Ajaccio", nom: "Napoléon Bonaparte", pays: "🇫🇷", lat: 41.9236, lon: 8.8025 },
+  BIA: { ville: "Bastia", nom: "Poretta", pays: "🇫🇷", lat: 42.5527, lon: 9.4837 },
 
-  OSL: { ville: "Oslo", nom: "Gardermoen", lat: 60.1975, lon: 11.1004 },
-  BGO: { ville: "Bergen", nom: "Flesland", lat: 60.2934, lon: 5.2181 },
-  SVG: { ville: "Stavanger", nom: "Sola", lat: 58.8768, lon: 5.6379 },
-  TRD: { ville: "Trondheim", nom: "Værnes", lat: 63.4578, lon: 10.9242 },
-  ARN: { ville: "Stockholm", nom: "Arlanda", lat: 59.6519, lon: 17.9186 },
-  GOT: { ville: "Göteborg", nom: "Landvetter", lat: 57.6628, lon: 12.2798 },
-  CPH: { ville: "Copenhague", nom: "Kastrup", lat: 55.6180, lon: 12.6560 },
-  HEL: { ville: "Helsinki", nom: "Vantaa", lat: 60.3172, lon: 24.9633 },
-  HAJ: { ville: "Hanovre", nom: "Hannover Airport", lat: 52.4611, lon: 9.6850 },
-  BCN: { ville: "Barcelone", nom: "El Prat", lat: 41.2974, lon: 2.0833 },
-  MAD: { ville: "Madrid", nom: "Barajas", lat: 40.4839, lon: -3.5680 },
-  PMI: { ville: "Palma de Majorque", nom: "Son Sant Joan", lat: 39.5517, lon: 2.7388 },
-  LHR: { ville: "Londres", nom: "Heathrow", lat: 51.4700, lon: -0.4543 },
-  LGW: { ville: "Londres", nom: "Gatwick", lat: 51.1537, lon: -0.1821 },
-  STN: { ville: "Londres", nom: "Stansted", lat: 51.8860, lon: 0.2389 },
-  LIS: { ville: "Lisbonne", nom: "Humberto Delgado", lat: 38.7742, lon: -9.1342 },
-  OPO: { ville: "Porto", nom: "Francisco Sá Carneiro", lat: 41.2481, lon: -8.6814 },
-  FCO: { ville: "Rome", nom: "Fiumicino", lat: 41.8003, lon: 12.2389 },
-  MXP: { ville: "Milan", nom: "Malpensa", lat: 45.6301, lon: 8.7255 },
-  GVA: { ville: "Genève", nom: "Cointrin", lat: 46.2370, lon: 6.1092 },
-  ZRH: { ville: "Zurich", nom: "Kloten", lat: 47.4582, lon: 8.5555 },
-  BRU: { ville: "Bruxelles", nom: "Zaventem", lat: 50.9010, lon: 4.4856 },
-  CRL: { ville: "Charleroi", nom: "Bruxelles-Sud", lat: 50.4592, lon: 4.4538 },
-  AMS: { ville: "Amsterdam", nom: "Schiphol", lat: 52.3105, lon: 4.7683 },
-  FRA: { ville: "Francfort", nom: "Main", lat: 50.0379, lon: 8.5622 },
-  MUC: { ville: "Munich", nom: "Franz Josef Strauß", lat: 48.3537, lon: 11.7750 },
-  BER: { ville: "Berlin", nom: "Brandenburg", lat: 52.3667, lon: 13.5033 },
-  DUS: { ville: "Düsseldorf", nom: "Airport", lat: 51.2895, lon: 6.7668 },
-  HAM: { ville: "Hambourg", nom: "Airport", lat: 53.6304, lon: 9.9882 },
-  STR: { ville: "Stuttgart", nom: "Airport", lat: 48.6899, lon: 9.2220 },
-  VIE: { ville: "Vienne", nom: "Schwechat", lat: 48.1103, lon: 16.5697 },
-  DUB: { ville: "Dublin", nom: "Airport", lat: 53.4213, lon: -6.2701 },
-  RAK: { ville: "Marrakech", nom: "Ménara", lat: 31.6069, lon: -8.0363 },
-  ALG: { ville: "Alger", nom: "Houari Boumédiène", lat: 36.6910, lon: 3.2154 },
-  TUN: { ville: "Tunis", nom: "Carthage", lat: 36.8510, lon: 10.2272 }
+  OSL: { ville: "Oslo", nom: "Gardermoen", pays: "🇳🇴", lat: 60.1975, lon: 11.1004 },
+  BGO: { ville: "Bergen", nom: "Flesland", pays: "🇳🇴", lat: 60.2934, lon: 5.2181 },
+  SVG: { ville: "Stavanger", nom: "Sola", pays: "🇳🇴", lat: 58.8768, lon: 5.6379 },
+  TRD: { ville: "Trondheim", nom: "Værnes", pays: "🇳🇴", lat: 63.4578, lon: 10.9242 },
+  ARN: { ville: "Stockholm", nom: "Arlanda", pays: "🇸🇪", lat: 59.6519, lon: 17.9186 },
+  GOT: { ville: "Göteborg", nom: "Landvetter", pays: "🇸🇪", lat: 57.6628, lon: 12.2798 },
+  CPH: { ville: "Copenhague", nom: "Kastrup", pays: "🇩🇰", lat: 55.6180, lon: 12.6560 },
+  HEL: { ville: "Helsinki", nom: "Vantaa", pays: "🇫🇮", lat: 60.3172, lon: 24.9633 },
+  HAJ: { ville: "Hanovre", nom: "Hannover Airport", pays: "🇩🇪", lat: 52.4611, lon: 9.6850 },
+  BCN: { ville: "Barcelone", nom: "El Prat", pays: "🇪🇸", lat: 41.2974, lon: 2.0833 },
+  MAD: { ville: "Madrid", nom: "Barajas", pays: "🇪🇸", lat: 40.4839, lon: -3.5680 },
+  PMI: { ville: "Palma de Majorque", nom: "Son Sant Joan", pays: "🇪🇸", lat: 39.5517, lon: 2.7388 },
+  LHR: { ville: "Londres", nom: "Heathrow", pays: "🇬🇧", lat: 51.4700, lon: -0.4543 },
+  LGW: { ville: "Londres", nom: "Gatwick", pays: "🇬🇧", lat: 51.1537, lon: -0.1821 },
+  STN: { ville: "Londres", nom: "Stansted", pays: "🇬🇧", lat: 51.8860, lon: 0.2389 },
+  LIS: { ville: "Lisbonne", nom: "Humberto Delgado", pays: "🇵🇹", lat: 38.7742, lon: -9.1342 },
+  OPO: { ville: "Porto", nom: "Francisco Sá Carneiro", pays: "🇵🇹", lat: 41.2481, lon: -8.6814 },
+  FCO: { ville: "Rome", nom: "Fiumicino", pays: "🇮🇹", lat: 41.8003, lon: 12.2389 },
+  MXP: { ville: "Milan", nom: "Malpensa", pays: "🇮🇹", lat: 45.6301, lon: 8.7255 },
+  GVA: { ville: "Genève", nom: "Cointrin", pays: "🇨🇭", lat: 46.2370, lon: 6.1092 },
+  ZRH: { ville: "Zurich", nom: "Kloten", pays: "🇨🇭", lat: 47.4582, lon: 8.5555 },
+  BRU: { ville: "Bruxelles", nom: "Zaventem", pays: "🇧🇪", lat: 50.9010, lon: 4.4856 },
+  CRL: { ville: "Charleroi", nom: "Bruxelles-Sud", pays: "🇧🇪", lat: 50.4592, lon: 4.4538 },
+  AMS: { ville: "Amsterdam", nom: "Schiphol", pays: "🇳🇱", lat: 52.3105, lon: 4.7683 },
+  FRA: { ville: "Francfort", nom: "Main", pays: "🇩🇪", lat: 50.0379, lon: 8.5622 },
+  MUC: { ville: "Munich", nom: "Franz Josef Strauß", pays: "🇩🇪", lat: 48.3537, lon: 11.7750 },
+  BER: { ville: "Berlin", nom: "Brandenburg", pays: "🇩🇪", lat: 52.3667, lon: 13.5033 },
+  DUS: { ville: "Düsseldorf", nom: "Airport", pays: "🇩🇪", lat: 51.2895, lon: 6.7668 },
+  HAM: { ville: "Hambourg", nom: "Airport", pays: "🇩🇪", lat: 53.6304, lon: 9.9882 },
+  STR: { ville: "Stuttgart", nom: "Airport", pays: "🇩🇪", lat: 48.6899, lon: 9.2220 },
+  VIE: { ville: "Vienne", nom: "Schwechat", pays: "🇦🇹", lat: 48.1103, lon: 16.5697 },
+  DUB: { ville: "Dublin", nom: "Airport", pays: "🇮🇪", lat: 53.4213, lon: -6.2701 },
+  RAK: { ville: "Marrakech", nom: "Ménara", pays: "🇲🇦", lat: 31.6069, lon: -8.0363 },
+  ALG: { ville: "Alger", nom: "Houari Boumédiène", pays: "🇩🇿", lat: 36.6910, lon: 3.2154 },
+  TUN: { ville: "Tunis", nom: "Carthage", pays: "🇹🇳", lat: 36.8510, lon: 10.2272 }
 };
 
 const airportAsyncCache = {};
@@ -772,14 +800,24 @@ async function resoudreAeroportEnLigne(code){
       for(const icao in data){
         const apt = data[icao];
         if(apt.iata && apt.iata.toUpperCase() === code){
+          let flag = "✈️";
+          if(apt.country){
+            const cc = apt.country.toUpperCase();
+            if(cc.length === 2){
+              flag = String.fromCodePoint(cc.charCodeAt(0) + 127397, cc.charCodeAt(1) + 127397);
+            }
+          }
           AIRPORTS[code] = { 
             ville: apt.city || apt.name, 
-            nom: apt.name, 
+            nom: apt.name,
+            pays: flag,
             lat: parseFloat(apt.lat), 
             lon: parseFloat(apt.lon) 
           };
           const el = document.getElementById("apt-" + code);
           if(el) el.textContent = `${AIRPORTS[code].ville} (${AIRPORTS[code].nom})`;
+          const fl = document.getElementById("flag-" + code);
+          if(fl) fl.textContent = flag;
           break;
         }
       }
@@ -788,12 +826,12 @@ async function resoudreAeroportEnLigne(code){
 }
 
 function formatAirport(code){
-  if(!code || code === "—") return { code: "—", label: "Non renseigné", lat: null, lon: null };
+  if(!code || code === "—") return { code: "—", label: "Non renseigné", pays: "✈️", lat: null, lon: null };
   const c = code.toUpperCase().trim();
   const a = AIRPORTS[c];
-  if(a) return { code: c, label: `${a.ville} (${a.nom})`, lat: a.lat, lon: a.lon };
+  if(a) return { code: c, label: `${a.ville} (${a.nom})`, pays: a.pays || "✈️", lat: a.lat, lon: a.lon };
   resoudreAeroportEnLigne(c);
-  return { code: c, label: `Recherche de l'aéroport…`, lat: null, lon: null };
+  return { code: c, label: `Recherche de l'aéroport…`, pays: "✈️", lat: null, lon: null };
 }
 
 function estimerHeureArrivee(ac){
@@ -948,6 +986,31 @@ function gisement(lat1,lon1,lat2,lon2){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
+function traduireGisementEnTexte(azimut){
+  const secteurs = [
+    { label: "au Nord", min: 337.5, max: 360 },
+    { label: "au Nord", min: 0, max: 22.5 },
+    { label: "au Nord-Est", min: 22.5, max: 67.5 },
+    { label: "à l'Est", min: 67.5, max: 112.5 },
+    { label: "au Sud-Est", min: 112.5, max: 157.5 },
+    { label: "au Sud", min: 157.5, max: 202.5 },
+    { label: "au Sud-Ouest", min: 202.5, max: 247.5 },
+    { label: "à l'Ouest", min: 247.5, max: 292.5 },
+    { label: "au Nord-Ouest", min: 292.5, max: 337.5 }
+  ];
+  for(const s of secteurs){
+    if(azimut >= s.min && azimut < s.max) return s.label;
+  }
+  return "à proximité";
+}
+
+function traduireCapEnTexte(cap){
+  if(typeof cap !== "number") return "";
+  const dirs = ["le Nord", "le Nord-Est", "l'Est", "le Sud-Est", "le Sud", "le Sud-Ouest", "l'Ouest", "le Nord-Ouest"];
+  const idx = Math.round(cap / 45) % 8;
+  return ` • Cap vers ${dirs[idx]} (${Math.round(cap)}°)`;
+}
+
 function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
@@ -958,7 +1021,8 @@ function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   return {
     x: 150 + rPixel * Math.cos(angleRad),
     y: 150 + rPixel * Math.sin(angleRad),
-    dist
+    dist,
+    azimut
   };
 }
 
@@ -1192,6 +1256,31 @@ function genererStructureRadar(maxKm){
   `;
 }
 
+function calculerVariometre(ac){
+  if(typeof ac.alt_baro !== "number") return { texte: "Palier", classe: "vario-level" };
+  const h = planeAltitudeHistory[ac.hex];
+  const now = performance.now();
+  if(!h || !h.lastTime){
+    planeAltitudeHistory[ac.hex] = { alt: ac.alt_baro, lastTime: now, rate: 0 };
+    return { texte: "Palier", classe: "vario-level" };
+  }
+
+  const dtSec = (now - h.lastTime) / 1000;
+  if(dtSec >= 3){
+    const dAltFt = ac.alt_baro - h.alt;
+    const rateFpm = Math.round((dAltFt / dtSec) * 60);
+    planeAltitudeHistory[ac.hex] = { alt: ac.alt_baro, lastTime: now, rate: rateFpm };
+  }
+
+  const r = planeAltitudeHistory[ac.hex].rate || 0;
+  if(r > 150){
+    return { texte: `▲ +${r} ft/min`, classe: "vario-up" };
+  } else if(r < -150){
+    return { texte: `▼ ${r} ft/min`, classe: "vario-down" };
+  }
+  return { texte: "▶ Palier", classe: "vario-level" };
+}
+
 function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const alt = ac.alt_baro;
   const altM = (typeof alt === "number") ? alt*0.3048 : null;
@@ -1213,6 +1302,12 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
 
   const dep = formatAirport(ac.origin);
   const arr = formatAirport(ac.dest);
+
+  const azimut = gisement(pos.lat, pos.lon, ac.lat, ac.lon);
+  const posTexte = traduireGisementEnTexte(azimut);
+  const capTexte = traduireCapEnTexte(ac.track);
+
+  const vario = calculerVariometre(ac);
 
   const cieHtml = cie
     ? `<div class="airline-badge" style="background:${cie.color};color:${cie.text}">
@@ -1239,9 +1334,11 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
   const routeHtml = `
     <div class="route-box">
       <div class="route-main">
+        <span class="route-flag" id="flag-${esc(dep.code)}">${dep.pays}</span>
         <span class="route-airport">${esc(dep.code)}</span>
         <span class="route-arrow-wrap">➔</span>
         <span class="route-airport">${esc(arr.code)}</span>
+        <span class="route-flag" id="flag-${esc(arr.code)}">${arr.pays}</span>
       </div>
       <div class="route-sub">
         <span>De : <b id="apt-${esc(dep.code)}">${esc(dep.label)}</b></span>
@@ -1252,11 +1349,14 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
 
   const bannerHtml = `
     <div class="detection-banner">
-      <div class="left-info">
-        <span class="beacon"></span>
-        <span class="text">Un avion a été détecté à proximité</span>
+      <div class="detection-header">
+        <div class="left-info">
+          <span class="beacon"></span>
+          <span class="text">Un avion a été détecté à proximité</span>
+        </div>
+        <div class="distance-tag" id="banner-distance">${dist.toFixed(1).replace(".",",")} km</div>
       </div>
-      <div class="distance-tag" id="banner-distance">${dist.toFixed(1).replace(".",",")} km</div>
+      <div class="cardinal-line" id="cardinal-text">Position : ${posTexte}${capTexte}</div>
     </div>`;
 
   const animClass = avecAnimationTransition ? "fade-in" : "";
@@ -1273,7 +1373,7 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
         <div class="model">${esc(nomCompletModele)}${codeIcaoBadge}${immat}</div>
       </div>
 
-      <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ -->
+      <!-- 2. ROUTE & DESTINATION GRAND FORMAT ANIMÉ AVEC DRAPEAUX -->
       ${routeHtml}
 
       <!-- 3. SCHÉMA VECTORIEL COMPACT EN BAS -->
@@ -1286,7 +1386,11 @@ function dessiner(ac, pos, dist, avecAnimationTransition = false){
       </div>
       <div class="stats">
         <div class="stat"><div class="v" id="live-eta">${eta ? eta : "—"}<i>${eta ? "" : "N/D"}</i></div><div class="l">Arrivée estimée</div></div>
-        <div class="stat"><div class="v" id="live-alt">${altM!==null?arrondi(altM):"—"}<i>${altM!==null?"m":""}</i></div><div class="l" id="live-alt-sub">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div></div>
+        <div class="stat">
+          <div class="v" id="live-alt">${altM!==null?arrondi(altM):"—"}<i>${altM!==null?"m":""}</i></div>
+          <div class="l" id="live-alt-sub">Altitude${altM!==null?` (${arrondi(alt)} ft)`:""}</div>
+          <div class="vario-tag ${vario.classe}" id="live-vario">${vario.texte}</div>
+        </div>
         <div class="stat"><div class="v" id="live-speed">${vitKmh!==null?arrondi(vitKmh):"—"}<i>km/h</i></div><div class="l">Vitesse sol</div></div>
         <div class="stat"><div class="v" id="live-distance">—<i>km</i></div><div class="l">Distance de toi</div></div>
       </div>
@@ -1326,6 +1430,13 @@ function animer(){
   const bannerDistEl = document.getElementById("banner-distance");
   if(bannerDistEl){
     bannerDistEl.textContent = `${ptActuel.dist.toFixed(1).replace(".",",")} km`;
+  }
+
+  const cardEl = document.getElementById("cardinal-text");
+  if(cardEl){
+    const posTxt = traduireGisementEnTexte(ptActuel.azimut);
+    const capTxt = traduireCapEnTexte(track);
+    cardEl.textContent = `Position : ${posTxt}${capTxt}`;
   }
 
   if(secLayer){
@@ -1453,15 +1564,21 @@ async function tick(){
       const vitKmh = (typeof ac.gs === "number") ? ac.gs * 1.852 : null;
       const eta = estimerHeureArrivee(ac);
       const pct = calculerPourcentageVol(ac);
+      const vario = calculerVariometre(ac);
 
       const altEl = document.getElementById("live-alt");
       const altSubEl = document.getElementById("live-alt-sub");
+      const varioEl = document.getElementById("live-vario");
       if(altEl && altM !== null){
         altEl.innerHTML = `${arrondi(altM)}<i>m</i>`;
         altEl.classList.remove("metric-flash");
         void altEl.offsetWidth;
         altEl.classList.add("metric-flash");
         if(altSubEl) altSubEl.textContent = `Altitude (${arrondi(alt)} ft)`;
+      }
+      if(varioEl){
+        varioEl.className = `vario-tag ${vario.classe}`;
+        varioEl.textContent = vario.texte;
       }
 
       const speedEl = document.getElementById("live-speed");
