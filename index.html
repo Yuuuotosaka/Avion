@@ -53,12 +53,14 @@ body.night-mode .detection-banner{background:linear-gradient(90deg,rgba(255,146,
 .distance-tag{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--sign);letter-spacing:.04em}
 .cardinal-line{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:.04em;padding-left:17px}
 body.night-mode .cardinal-line{color:var(--sign)}
-.identity-block{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
-.airline-badge{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.06em;padding:3px 10px;border-radius:5px;margin-bottom:2px;text-transform:uppercase;box-shadow:0 2px 8px rgba(0,0,0,.4);width:fit-content}
-.airline-logo-icon{display:inline-flex;width:14px;height:14px}
+
+.identity-block{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.airline-badge{display:inline-flex;align-items:center;gap:10px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(36px,4.5vw,56px);line-height:1;letter-spacing:.03em;padding:4px 14px;border-radius:8px;margin-bottom:2px;text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.4);width:fit-content}
+.airline-logo-icon{display:inline-flex;width:28px;height:28px;flex-shrink:0}
 .airline-logo-icon svg{width:100%;height:100%}
-.callsign{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(44px,5.2vw,68px);line-height:.88;color:var(--sign);letter-spacing:.02em;text-shadow:0 0 20px rgba(255,210,63,.18)}
+.callsign{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;color:var(--sign);letter-spacing:.08em;background:rgba(255,210,63,.12);border:1px solid rgba(255,210,63,.3);padding:2px 8px;border-radius:5px;width:fit-content;margin-bottom:2px}
 .model{font-size:17px;font-weight:600;margin-top:2px}
+
 .route-box{background:rgba(22,34,61,.55);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;flex-shrink:0}
 body.night-mode .route-box{background:rgba(28,17,8,.55)}
 .route-main{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:36px;color:#fff;letter-spacing:.05em;display:flex;align-items:center;gap:12px;line-height:1}
@@ -211,7 +213,7 @@ RAM,AT|Royal Air Maroc|b91c1c|fff|G`.split("\n").forEach(l=>{
   const [c,n,bg,fg,lg]=l.split("|");
   c.split(",").forEach(k=>AL[k]={nom:n,color:"#"+bg,text:"#"+fg,logo:LOGOS[lg]});
 });
-/* Le préfixe doit être suivi d'un chiffre : évite de confondre une immatriculation avec une compagnie */
+
 function resoudreCompagnie(ac){
   for(const s of [ac.flight,ac.callsign]){
     const c=String(s||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
@@ -225,7 +227,6 @@ const MODEL_NAMES={};
 `DR40=Robin DR400;DR48=Robin DR400 Regent;C172=Cessna 172 Skyhawk;C182=Cessna 182 Skylane;C152=Cessna 152;C150=Cessna 150;P28A=Piper PA-28 Cherokee;PA28=Piper PA-28 Archer;PA38=Piper PA-38 Tomahawk;SR20=Cirrus SR20;SR22=Cirrus SR22;DA40=Diamond DA40 Diamond Star;DA42=Diamond DA42 Twin Star;DA62=Diamond DA62;TB20=SOCATA TB-20 Trinidad;TB10=SOCATA TB-10 Tobago;AP22=Aeroprakt A-22 Foxbat;BE58=Beechcraft Baron 58;BE55=Beechcraft Baron 55;BE36=Beechcraft Bonanza A36;BE33=Beechcraft Bonanza 33;PA34=Piper PA-34 Seneca;PA44=Piper PA-44 Seminole;AT72=ATR 72-500/600;AT76=ATR 72-600;AT75=ATR 72-500;AT45=ATR 42-500;AT46=ATR 42-600;DH8D=De Havilland Dash 8-400 (Q400);DH8C=De Havilland Dash 8-300;B350=Beechcraft Super King Air 350;BE20=Beechcraft Super King Air 200;BE9L=Beechcraft King Air 90;PC12=Pilatus PC-12;TBM9=Daher TBM 930/960;TBM8=Daher TBM 850;C208=Cessna 208 Caravan;FA7X=Dassault Falcon 7X;FA8X=Dassault Falcon 8X;F900=Dassault Falcon 900;F2TH=Dassault Falcon 2000;C56X=Cessna Citation Excel/XLS;C510=Cessna Citation Mustang;C525=Cessna CitationJet CJ1/CJ2;C680=Cessna Citation Sovereign;C750=Cessna Citation X;CL35=Bombardier Challenger 350;CL60=Bombardier Challenger 605;GL5T=Bombardier Global 5000;GLEX=Bombardier Global Express / 6000;GL7T=Bombardier Global 7500;GLF5=Gulfstream G550;GLF6=Gulfstream G650;E55P=Embraer Phenom 300;E50P=Embraer Phenom 100;E35L=Embraer Legacy 650;H25B=Hawker 800;A318=Airbus A318;A319=Airbus A319-100;A320=Airbus A320-200;A20N=Airbus A320neo;A321=Airbus A321-200;A21N=Airbus A321neo / XLR;BCS1=Airbus A220-100;BCS3=Airbus A220-300;A223=Airbus A220-300;B737=Boeing 737-700;B738=Boeing 737-800;B739=Boeing 737-900ER;B38M=Boeing 737 MAX 8;B39M=Boeing 737 MAX 9;E190=Embraer E190;E195=Embraer E195;E295=Embraer E195-E2;CRJ9=Bombardier CRJ-900;CRJX=Bombardier CRJ-1000;A332=Airbus A330-200;A333=Airbus A330-300;A339=Airbus A330-900neo;A359=Airbus A350-900;A35K=Airbus A350-1000;B763=Boeing 767-300ER;B772=Boeing 777-200ER;B77L=Boeing 777-200LR;B77W=Boeing 777-300ER;B788=Boeing 787-8 Dreamliner;B789=Boeing 787-9 Dreamliner;B78X=Boeing 787-10 Dreamliner;A343=Airbus A340-300;A346=Airbus A340-600;A388=Airbus A380-800;B744=Boeing 747-400;B748=Boeing 747-8 Intercontinental`.split(";").forEach(e=>{const i=e.indexOf("=");MODEL_NAMES[e.slice(0,i)]=e.slice(i+1)});
 const traduireNomModele=c=>!c?"Avion inconnu":(MODEL_NAMES[c.toUpperCase().trim()]||`Appareil ${c.toUpperCase().trim()}`);
 
-/* Liste locale réduite : les autres aéroports sont résolus en ligne, une seule fois, puis gardés en cache */
 const AIRPORTS={};
 `CDG|Paris|Charles de Gaulle|FR|49.0097|2.5479
 ORY|Paris|Orly|FR|48.7262|2.3652
@@ -295,7 +296,6 @@ QFB|Fribourg-en-Brisgau|Aérodrome (EDTF)|DE|48.0217|7.8347`.split("\n").forEach
 });
 Object.assign(AIRPORTS,lsGet("apt_cache",{}));
 
-/* Le fichier mondial est téléchargé UNE seule fois, seulement si un aéroport est inconnu */
 let aptDB=null; const aptPending={}, aptFail={};
 function chargerAptDB(){
   return aptDB||(aptDB=fetch("https://raw.githubusercontent.com/mwgg/Airports/master/airports.json")
@@ -344,13 +344,12 @@ let currentPos=null, fleet={}, hist=lsGet("traj_cache",{}), vh={};
 let selHex=null, selManual=false, mode="", transitioning=false, switchTimer=null, busy=false, fails=0;
 let scaleDisp=60, scaleTarget=60;
 const TIERS=[[15,18],[30,36],[55,60],[1e9,90]];
-/* Échelle avec hystérésis : évite le clignotement du zoom autour d'un seuil */
+
 function echelleCible(d,cur){
   for(const [lim,s] of TIERS){ if(d<=(s<cur?lim*.9:lim)) return s; }
   return 90;
 }
 
-/* Position estimée en continu + correction douce quand une nouvelle donnée arrive */
 function livePos(p,now){
   const dt=(now-p.t0)/1000, dtc=Math.min(dt,30);
   const d=(p.gs||0)*1.852/3600*dtc, tr=(p.track||0)*Math.PI/180, k=Math.exp(-dt/1.5);
@@ -359,7 +358,7 @@ function livePos(p,now){
     lon:p.lon0+d*Math.sin(tr)/(111.32*Math.cos(p.lat0*Math.PI/180))+p.offLon*k
   };
 }
-/* Projection isotrope : 1 km = même nombre de pixels dans toutes les directions */
+
 function proj(lat,lon,clamp=true){
   const dist=distanceKm(currentPos.lat,currentPos.lon,lat,lon), az=gisement(currentPos.lat,currentPos.lon,lat,lon);
   const pk=112/scaleDisp, a=(az-90)*Math.PI/180;
@@ -382,7 +381,6 @@ function jsonpFR24(url,ms=7000){
 }
 const HELICO=/^(EC\d\d|H\d{3}$|R22|R44|R66|AS\d\d|A1[0-9]9|B06|B4\d\d|S76|S92|UH60|NH90|MI\d)/;
 async function chercherAvions(pos){
-  /* La longitude est élargie selon la latitude pour couvrir vraiment 90 km dans toutes les directions */
   const dLat=RAYON_SCAN_KM/111.32, dLon=dLat/Math.max(.2,Math.cos(pos.lat*Math.PI/180));
   const b=[pos.lat+dLat,pos.lat-dLat,pos.lon-dLon,pos.lon+dLon].map(v=>v.toFixed(4)).join(",");
   const j=await jsonpFR24(`https://data-cloud.flightradar24.com/zones/fcgi/feed.js?bounds=${b}&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=0&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`);
@@ -392,22 +390,20 @@ async function chercherAvions(pos){
     const d=j[k];
     if(!Array.isArray(d)||typeof d[1]!=="number"||typeof d[2]!=="number") continue;
     const origin=(d[11]||"").trim().toUpperCase(), dest=(d[12]||"").trim().toUpperCase();
-const callsign=(d[16]||"").trim(), flight=(d[13]||"").trim()||callsign;
-const t=(d[8]||"").toUpperCase().trim(), alt=d[4];
+    const callsign=(d[16]||"").trim(), flight=(d[13]||"").trim()||callsign;
+    const t=(d[8]||"").toUpperCase().trim(), alt=d[4];
 
-/* Filtre : écarte le tourisme monomoteur et petit bimoteur */
-const prof=detecterProfil(t);
-const estTourisme = prof.type === "LIGHT_PROP" || prof.type === "TWIN_PROP";
+    const prof=detecterProfil(t);
+    const estTourisme=prof.type==="LIGHT_PROP"||prof.type==="TWIN_PROP";
 
-if(origin.length===3&&dest.length===3&&flight.length>=2&&typeof alt==="number"&&alt>100&&!HELICO.test(t)&&!estTourisme){
-  liste.push({hex:d[0],lat:d[1],lon:d[2],track:d[3],alt_baro:alt,gs:d[5],t,r:(d[9]||"").trim(),
-    vs:typeof d[15]==="number"?d[15]:null,origin,dest,flight,callsign});
-}
+    if(origin.length===3&&dest.length===3&&flight.length>=2&&typeof alt==="number"&&alt>100&&!HELICO.test(t)&&!estTourisme){
+      liste.push({hex:d[0],lat:d[1],lon:d[2],track:d[3],alt_baro:alt,gs:d[5],t,r:(d[9]||"").trim(),
+        vs:typeof d[15]==="number"?d[15]:null,origin,dest,flight,callsign});
+    }
   }
   return liste;
 }
 
-/* Fusionne les nouvelles données ; ne recale pas l'avion si la position n'a pas changé (sinon il recule) */
 function majFleet(liste,now){
   const vus=new Set();
   for(const a of liste){
@@ -564,13 +560,14 @@ function radarHTML(avecAvion){
     ${avecAvion?`<g id="rcl" clip-path="url(#fc)"></g><g id="rsl" clip-path="url(#fc)"></g><g id="rml" clip-path="url(#fc)"></g>`:""}
   </svg></div>`;
 }
+
 const mk=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
 const R={};
 function bindRadar(){
   const root=document.querySelector(".radar-box svg"); if(!root) return false;
   if(R.root===root) return true;
   for(const k in R) delete R[k];
-  Object.assign(R,{root,beam:$("beam"),l:[$("rl1"),$("rl2"),$("rl3")],sec:{},col:null,tr:null,lastQ:0,lastDs:""});
+  Object.assign(R,{root,beam:$("beam"),l:[$("rl1"),$("rl2"),$("rl3")],sec:{},col:null,tr:null,lastQ:0,lastDs:"",lastTrajUpdate:0});
   const ml=$("rml");
   if(ml){
     R.ml=ml; R.secg=$("rsl");
@@ -586,6 +583,7 @@ function bindRadar(){
   }
   return true;
 }
+
 function syncSec(){
   if(!R.secg) return;
   const keep=new Set();
@@ -601,7 +599,6 @@ function syncSec(){
   for(const h in R.sec) if(!keep.has(h)){R.sec[h].remove();delete R.sec[h];}
 }
 
-/* Boucle d'animation : on ne fait que modifier des attributs d'éléments déjà créés (fluide à 60 i/s) */
 let lastFrame=0;
 function animer(now){
   requestAnimationFrame(animer);
@@ -613,11 +610,12 @@ function animer(now){
   scaleDisp=Math.abs(dz)<.03?scaleTarget:scaleDisp+dz*(1-Math.exp(-dt*4));
   for(let i=0;i<3;i++){const t=Math.round(scaleDisp*(i+1)/3)+" km"; if(R.l[i]&&R.l[i].textContent!==t) R.l[i].textContent=t;}
 
-  /* balayage + onde (synchronisés avec la rémanence) */
+  /* balayage laser */
   const per=R.ml?4500:7000, p=(now%per)/per, bx=20+p*360;
   R.beam.setAttribute("transform",`translate(${bx.toFixed(1)} 0)`);
   R.beam.setAttribute("opacity",Math.min(1,p*20,(1-p)*20).toFixed(2));
   if(!R.ml||transitioning||!selHex||!fleet[selHex]||!currentPos) return;
+
   const ac=fleet[selHex], l=livePos(ac,performance.now()), pt=proj(l.lat,l.lon);
   const track=typeof ac.track==="number"?ac.track:0, tr=track*Math.PI/180, sn=Math.sin(tr), cs=Math.cos(tr);
   const altM=typeof ac.alt_baro==="number"?ac.alt_baro*.3048:null, col=couleurSelonAltitude(altM);
@@ -626,14 +624,16 @@ function animer(now){
     R.col=col;
     for(const k of ["tline","tdots","pline"]) R[k].setAttribute("stroke",col);
     R.pdot.setAttribute("fill",col); R.gpath.setAttribute("fill",col); R.gbox.setAttribute("stroke",col);
-    R.g.style.filter=`drop-shadow(0 0 4px ${col})`;
   }
   if(R.tr!==track){R.tr=track; R.gr.setAttribute("transform",`rotate(${track})`);}
 
-  /* vraie trajectoire mémorisée + position actuelle */
-  const pts=(hist[selHex]||[]).map(h=>{const a=proj(h.lat,h.lon,false);return a.x.toFixed(1)+","+a.y.toFixed(1)});
-  pts.push(pt.x.toFixed(1)+","+pt.y.toFixed(1));
-  const ps=pts.join(" "); R.tline.setAttribute("points",ps); R.tdots.setAttribute("points",ps);
+  /* trajectoire mémorisée : cadencée pour soulager le GPU de la tablette */
+  if(!R.lastTrajUpdate||now-R.lastTrajUpdate>800){
+    R.lastTrajUpdate=now;
+    const pts=(hist[selHex]||[]).map(h=>{const a=proj(h.lat,h.lon,false);return a.x.toFixed(1)+","+a.y.toFixed(1)});
+    pts.push(pt.x.toFixed(1)+","+pt.y.toFixed(1));
+    const ps=pts.join(" "); R.tline.setAttribute("points",ps); R.tdots.setAttribute("points",ps);
+  }
 
   R.contrail.setAttribute("x1",(pt.x-26*sn).toFixed(1)); R.contrail.setAttribute("y1",(pt.y+26*cs).toFixed(1));
   R.contrail.setAttribute("x2",pt.x.toFixed(1)); R.contrail.setAttribute("y2",pt.y.toFixed(1));
@@ -710,7 +710,6 @@ function majQueue(){
   const w=$("queue-wrap"); if(!w) return;
   const liste=Object.values(fleet).sort((a,b)=>a._d-b._d);
   if(liste.length<=1){w.innerHTML="";return;}
-  const now=performance.now();
   w.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
     <span class="queue-label">Autres vols en approche (${liste.length}) :</span>
     <div class="nearby-queue">${liste.slice(0,5).map(a=>`<div class="queue-item ${a.hex===selHex?"active":""}" data-hex="${esc(a.hex)}"><span>${esc(a.flight||a.callsign||"Vol")}</span><span class="qd" style="opacity:.6">${Math.round(a._d)} km</span></div>`).join("")}</div></div>`;
@@ -741,8 +740,8 @@ function dessiner(ac){
         <div class="cardinal-line" id="cardinal-text">Position : ${traduireGisementEnTexte(az)}${traduireCapEnTexte(ac.track)}</div>
       </div>
       <div class="identity-block">
-        ${cieHtml}
         <div class="callsign">${esc((ac.flight||ac.callsign||ac.r||ac.hex||"Inconnu").trim())}</div>
+        ${cieHtml}
         <div class="model">${esc(traduireNomModele(ac.t))}</div>
       </div>
       <div class="route-box">
@@ -818,7 +817,6 @@ async function tick(){
     const tri=Object.values(fleet).sort((a,b)=>a._d-b._d);
     if(selManual&&!fleet[selHex]) selManual=false;
     let cur=fleet[selHex];
-    /* on ne change d'avion automatiquement que si un autre est nettement plus proche */
     if(!cur||(!selManual&&tri[0]!==cur&&tri[0]._d<cur._d)) cur=tri[0];
     scaleTarget=echelleCible(cur._d,scaleTarget);
     if(cur.hex!==selHex||mode!=="plane"){ if(!transitioning||cur.hex!==selHex) basculer(cur.hex); }
@@ -865,7 +863,7 @@ $("save").onclick=()=>{
   ecrirePos({lat,lon}); $("settings").classList.remove("open"); mode=""; tick();
 };
 
-/* Écran toujours allumé (tablette posée sur le bureau) */
+/* Écran toujours allumé */
 async function garderEcranAllume(){try{if("wakeLock" in navigator) await navigator.wakeLock.request("screen");}catch(e){}}
 garderEcranAllume();
 document.addEventListener("visibilitychange",()=>{
