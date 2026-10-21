@@ -392,12 +392,17 @@ async function chercherAvions(pos){
     const d=j[k];
     if(!Array.isArray(d)||typeof d[1]!=="number"||typeof d[2]!=="number") continue;
     const origin=(d[11]||"").trim().toUpperCase(), dest=(d[12]||"").trim().toUpperCase();
-    const callsign=(d[16]||"").trim(), flight=(d[13]||"").trim()||callsign;
-    const t=(d[8]||"").toUpperCase().trim(), alt=d[4];
-    if(origin.length===3&&dest.length===3&&flight.length>=2&&typeof alt==="number"&&alt>100&&!HELICO.test(t)){
-      liste.push({hex:d[0],lat:d[1],lon:d[2],track:d[3],alt_baro:alt,gs:d[5],t,r:(d[9]||"").trim(),
-        vs:typeof d[15]==="number"?d[15]:null,origin,dest,flight,callsign});
-    }
+const callsign=(d[16]||"").trim(), flight=(d[13]||"").trim()||callsign;
+const t=(d[8]||"").toUpperCase().trim(), alt=d[4];
+
+/* Filtre : écarte le tourisme monomoteur et petit bimoteur */
+const prof=detecterProfil(t);
+const estTourisme = prof.type === "LIGHT_PROP" || prof.type === "TWIN_PROP";
+
+if(origin.length===3&&dest.length===3&&flight.length>=2&&typeof alt==="number"&&alt>100&&!HELICO.test(t)&&!estTourisme){
+  liste.push({hex:d[0],lat:d[1],lon:d[2],track:d[3],alt_baro:alt,gs:d[5],t,r:(d[9]||"").trim(),
+    vs:typeof d[15]==="number"?d[15]:null,origin,dest,flight,callsign});
+}
   }
   return liste;
 }
