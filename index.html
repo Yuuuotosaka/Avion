@@ -825,7 +825,7 @@ async function tick(){
     if(selManual&&!fleet[selHex]) selManual=false;
     let cur=fleet[selHex];
     /* on ne change d'avion automatiquement que si un autre est nettement plus proche */
-    if(!cur||(!selManual&&tri[0]!==cur&&tri[0]._d<cur._d*.8)) cur=tri[0];
+    if(!cur||(!selManual&&tri[0]!==cur&&tri[0]._d<cur._d)) cur=tri[0];
     scaleTarget=echelleCible(cur._d,scaleTarget);
     if(cur.hex!==selHex||mode!=="plane"){ if(!transitioning||cur.hex!==selHex) basculer(cur.hex); }
     else if(!transitioning){ majStats(cur); majQueue(); syncSec(); }
