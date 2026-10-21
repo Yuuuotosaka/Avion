@@ -162,7 +162,7 @@ body.night-mode .radar-box{background:radial-gradient(ellipse at center,rgba(32,
 </div>
 
 <script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));caches.keys().then(k=>k.forEach(n=>caches.delete(n)))}
 
 const $=id=>document.getElementById(id);
 const NS="http://www.w3.org/2000/svg";
