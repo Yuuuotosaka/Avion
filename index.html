@@ -470,26 +470,27 @@ body.night-mode .plane-canvas{
   min-height:0;
 }
 
-/* CARTE TACTIQUE RECTANGULAIRE AVEC FONDU PÉRIPHÉRIQUE (EFFET HUD) */
+/* CARTE TACTIQUE MODERNE AVEC BORDS ADOUCIS */
 .radar-box{
   width:100%;
   height:100%;
   position:relative;
   border-radius:12px;
-  background:radial-gradient(ellipse at center, rgba(19, 34, 63, 0.45) 0%, rgba(9, 14, 26, 0.85) 75%);
-  border:1px solid rgba(37, 53, 87, 0.45);
-  box-shadow:inset 0 0 35px rgba(0,0,0,0.7), 0 4px 20px rgba(0,0,0,0.35);
+  background:linear-gradient(180deg, rgba(16, 26, 48, 0.4) 0%, rgba(10, 16, 30, 0.85) 100%);
+  border:1px solid rgba(37, 53, 87, 0.5);
+  box-shadow:inset 0 0 40px rgba(0,0,0,0.65), 0 4px 20px rgba(0,0,0,0.3);
   overflow:hidden;
-  /* Fondu doux sur les 4 bordures (haut, bas, gauche, droite) */
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 72%, rgba(0,0,0,0) 98%);
-  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0.85) 72%, rgba(0,0,0,0) 98%);
+  /* Fondu subtil sur les 4 contours pour intégration parfaite */
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,1) 65%, rgba(0,0,0,0.7) 85%, rgba(0,0,0,0) 100%);
+  mask-image: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,1) 65%, rgba(0,0,0,0.7) 85%, rgba(0,0,0,0) 100%);
 }
 body.night-mode .radar-box{
-  background:radial-gradient(ellipse at center, rgba(32, 19, 9, 0.5) 0%, rgba(9, 5, 3, 0.9) 75%);
+  background:linear-gradient(180deg, rgba(28, 17, 8, 0.45) 0%, rgba(10, 6, 4, 0.9) 100%);
   border-color:rgba(61, 37, 20, 0.5);
 }
 .radar-box svg{width:100%;height:100%;display:block}
 
+/* Balayage radar propre à 360° proportionnel */
 .radar-sweep{
   transform-origin:200px 140px;
   animation:radarSweepAnim 4.5s linear infinite;
@@ -504,14 +505,13 @@ body.night-mode .radar-box{
   animation:radarSweepAnim 8s linear infinite;
 }
 
-/* Onde de pulsation rectangulaire */
-.pulse-rect{
+.pulse-circle{
   transform-origin:200px 140px;
-  animation:radarRectPulse 2.8s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+  animation:radarPulse 2.8s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
 }
-@keyframes radarRectPulse{
-  0%{ width:8px; height:6px; x:196px; y:137px; opacity:0.9; stroke-width:2; }
-  100%{ width:320px; height:224px; x:40px; y:28px; opacity:0; stroke-width:0.5; }
+@keyframes radarPulse{
+  0%{ r:4; opacity:0.9; stroke-width:2; }
+  100%{ r:120; opacity:0; stroke-width:0.5; }
 }
 
 .stats{
@@ -1195,10 +1195,11 @@ function couleurSelonAltitude(altM){
   return "#e0e7ff";
 }
 
+/* Projection sans distorsion : coordonnées 1:1 centrées sur 200, 140 */
 function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
-  const rPixelMax = 125;
+  const rPixelMax = 120;
   const distRatio = Math.min(dist / maxKm, 1.25);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
@@ -1442,65 +1443,63 @@ function genererSvgAvion(t){
   `;
 }
 
-/* Grille tactique avec RECTANGLES EMBOÎTÉS (Range Boxes) */
+/* CARTE TACTIQUE 100% HOMOGÈNE - SANS ÉTIREMENT NI COINS MORTS */
 function genererStructureRadar(maxKm){
   const tier1 = Math.round(maxKm / 3);
   const tier2 = Math.round((maxKm * 2) / 3);
 
   return `
-    <div class="radar-box" aria-label="Carte radar tactique rectangulaire">
-      <svg viewBox="0 0 400 280" preserveAspectRatio="none">
+    <div class="radar-box" aria-label="Carte radar de surveillance">
+      <svg viewBox="80 20 240 240" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="sweepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.38"/>
-            <stop offset="60%" stop-color="var(--radar-beam)" stop-opacity="0.05"/>
+            <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.32"/>
+            <stop offset="60%" stop-color="var(--radar-beam)" stop-opacity="0.04"/>
             <stop offset="100%" stop-color="var(--radar-beam)" stop-opacity="0"/>
           </linearGradient>
         </defs>
 
-        <!-- RECTANGLES EMBOÎTÉS DE PORTÉE (Range Boxes) -->
-        <!-- 1. Rectangle intérieur (Tier 1) -->
-        <rect x="146" y="98" width="108" height="84" rx="4" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="3 4" opacity="0.7"/>
-        
-        <!-- 2. Rectangle intermédiaire (Tier 2) -->
-        <rect x="92" y="56" width="216" height="168" rx="6" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>
-        
-        <!-- 3. Rectangle extérieur (Max Range) avec coins renforcés type cockpit -->
-        <rect x="38" y="14" width="324" height="252" rx="8" fill="none" stroke="#253557" stroke-width="1.3" opacity="0.9"/>
+        <!-- Grille de coordonnées discrète -->
+        <g stroke="#253557" stroke-width="0.8" opacity="0.4">
+          <line x1="60" y1="80" x2="340" y2="80" stroke-dasharray="3 4"/>
+          <line x1="60" y1="200" x2="340" y2="200" stroke-dasharray="3 4"/>
+          <line x1="140" y1="0" x2="140" y2="280" stroke-dasharray="3 4"/>
+          <line x1="260" y1="0" x2="260" y2="280" stroke-dasharray="3 4"/>
+        </g>
 
-        <!-- Coins tactiques (Corners en L) sur le rectangle extérieur -->
-        <path d="M38 32 L38 14 L56 14" fill="none" stroke="var(--cyan)" stroke-width="2" opacity="0.8"/>
-        <path d="M362 14 L344 14 M362 14 L362 32" fill="none" stroke="var(--cyan)" stroke-width="2" opacity="0.8"/>
-        <path d="M38 248 L38 266 L56 266" fill="none" stroke="var(--cyan)" stroke-width="2" opacity="0.8"/>
-        <path d="M362 248 L362 266 L344 266" fill="none" stroke="var(--cyan)" stroke-width="2" opacity="0.8"/>
+        <!-- Arcs de portée circulaires naturels sans déformation -->
+        <circle cx="200" cy="140" r="40" fill="none" stroke="#253557" stroke-width="0.9" stroke-dasharray="3 4" opacity="0.7"/>
+        <circle cx="200" cy="140" r="80" fill="none" stroke="#253557" stroke-width="0.9" stroke-dasharray="3 4" opacity="0.8"/>
+        <circle cx="200" cy="140" r="120" fill="none" stroke="#253557" stroke-width="1.2" opacity="0.9"/>
 
-        <!-- Axes cardinaux orthonormés -->
-        <line x1="200" y1="14" x2="200" y2="266" stroke="#253557" stroke-width="1.2" opacity="0.75"/>
-        <line x1="38" y1="140" x2="362" y2="140" stroke="#253557" stroke-width="1.2" opacity="0.75"/>
+        <!-- Axes cardinaux nets -->
+        <line x1="200" y1="20" x2="200" y2="260" stroke="#253557" stroke-width="1" opacity="0.7"/>
+        <line x1="80" y1="140" x2="320" y2="140" stroke="#253557" stroke-width="1" opacity="0.7"/>
 
-        <!-- Faisceau radar balayant toute la surface -->
+        <!-- Faisceau de balayage fluide et parfaitement proportionnel -->
         <g class="radar-sweep">
-          <path d="M200 140 L200 -70 A250 250 0 0 1 370 20 Z" fill="url(#sweepGradient)"/>
-          <line x1="200" y1="140" x2="200" y2="-70" stroke="var(--radar-beam)" stroke-width="1.5" opacity="0.85"/>
+          <path d="M200 140 L200 20 A120 120 0 0 1 285 55 Z" fill="url(#sweepGradient)"/>
+          <line x1="200" y1="140" x2="200" y2="20" stroke="var(--radar-beam)" stroke-width="1.3" opacity="0.8"/>
         </g>
 
-        <!-- Graduations de portée posées sur les bordures des rectangles -->
+        <!-- Libellés cardinaux et anneaux de distance bien lisibles -->
         <g fill="#8fa1c2" font-family="JetBrains Mono" font-size="9" text-anchor="middle">
-          <text x="200" y="10" fill="var(--slate)" font-weight="700">N</text>
-          <text x="376" y="143" fill="var(--slate)" font-weight="700">E</text>
-          <text x="200" y="278" fill="var(--slate)" font-weight="700">S</text>
-          <text x="24" y="143" fill="var(--slate)" font-weight="700">O</text>
+          <text x="200" y="32" font-weight="700" fill="var(--slate)">N</text>
+          <text x="312" y="143" font-weight="700" fill="var(--slate)">E</text>
+          <text x="200" y="254" font-weight="700" fill="var(--slate)">S</text>
+          <text x="88" y="143" font-weight="700" fill="var(--slate)">O</text>
           
-          <text id="radar-lbl-1" x="200" y="93" fill="#8fa1c2" opacity="0.8">${tier1} km</text>
-          <text id="radar-lbl-2" x="200" y="51" fill="#8fa1c2" opacity="0.8">${tier2} km</text>
-          <text id="radar-lbl-3" x="200" y="24" fill="var(--sign)" opacity="0.9" font-weight="600">${maxKm} km</text>
+          <text id="radar-lbl-1" x="200" y="104" opacity="0.75">${tier1} km</text>
+          <text id="radar-lbl-2" x="200" y="64" opacity="0.75">${tier2} km</text>
+          <text id="radar-lbl-3" x="200" y="44" fill="var(--sign)" opacity="0.9">${maxKm} km</text>
         </g>
 
-        <!-- Centre de détection (Position de l'utilisateur) -->
-        <rect class="pulse-rect" fill="none" stroke="var(--cyan)"/>
-        <circle cx="200" cy="140" r="4" fill="var(--cyan)"/>
-        <circle cx="200" cy="140" r="8" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.5"/>
+        <!-- Centre : position de l'utilisateur -->
+        <circle class="pulse-circle" cx="200" cy="140" r="4" fill="none" stroke="var(--cyan)"/>
+        <circle cx="200" cy="140" r="4.5" fill="var(--cyan)"/>
+        <circle cx="200" cy="140" r="8" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
+        <!-- Couches dynamiques pour avion, traînée et prédiction -->
         <g id="radar-contrail-layer"></g>
         <g id="radar-secondary-layer"></g>
         <g id="radar-dynamic-layer"></g>
@@ -1513,7 +1512,7 @@ function genererEcranVeilleRadar(){
   return `
     <div class="tactical-idle">
       <div class="radar-box">
-        <svg viewBox="0 0 400 280" preserveAspectRatio="none">
+        <svg viewBox="80 20 240 240" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="sweepGradientIdle" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.25"/>
@@ -1522,34 +1521,34 @@ function genererEcranVeilleRadar(){
             </linearGradient>
           </defs>
 
-          <!-- Rectangles de veille -->
-          <rect x="146" y="98" width="108" height="84" rx="4" fill="none" stroke="#253557" stroke-dasharray="3 4" opacity="0.4"/>
-          <rect x="92" y="56" width="216" height="168" rx="6" fill="none" stroke="#253557" stroke-dasharray="4 4" opacity="0.5"/>
-          <rect x="38" y="14" width="324" height="252" rx="8" fill="none" stroke="#253557" stroke-width="1.2" opacity="0.65"/>
-
-          <path d="M38 32 L38 14 L56 14" fill="none" stroke="var(--slate)" stroke-width="1.5" opacity="0.6"/>
-          <path d="M362 14 L344 14 M362 14 L362 32" fill="none" stroke="var(--slate)" stroke-width="1.5" opacity="0.6"/>
-          <path d="M38 248 L38 266 L56 266" fill="none" stroke="var(--slate)" stroke-width="1.5" opacity="0.6"/>
-          <path d="M362 248 L362 266 L344 266" fill="none" stroke="var(--slate)" stroke-width="1.5" opacity="0.6"/>
-
-          <line x1="200" y1="14" x2="200" y2="266" stroke="#253557" stroke-width="1.2" opacity="0.5"/>
-          <line x1="38" y1="140" x2="362" y2="140" stroke="#253557" stroke-width="1.2" opacity="0.5"/>
-
-          <g class="radar-sweep-idle">
-            <path d="M200 140 L200 -70 A250 250 0 0 1 370 20 Z" fill="url(#sweepGradientIdle)"/>
-            <line x1="200" y1="140" x2="200" y2="-70" stroke="var(--radar-beam)" stroke-width="1" opacity="0.6"/>
+          <!-- Grille de veille -->
+          <g stroke="#253557" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.35">
+            <line x1="60" y1="80" x2="340" y2="80"/>
+            <line x1="60" y1="200" x2="340" y2="200"/>
+            <line x1="140" y1="0" x2="140" y2="280"/>
+            <line x1="260" y1="0" x2="260" y2="280"/>
+            <circle cx="200" cy="140" r="40" fill="none"/>
+            <circle cx="200" cy="140" r="80" fill="none"/>
+            <circle cx="200" cy="140" r="120" fill="none" stroke="#253557" stroke-width="1.2"/>
           </g>
 
-          <rect class="pulse-rect" fill="none" stroke="var(--cyan)"/>
-          <line class="idle-center-cross" x1="194" y1="140" x2="206" y2="140"/>
-          <line class="idle-center-cross" x1="200" y1="134" x2="200" y2="146"/>
+          <line x1="200" y1="20" x2="200" y2="260" stroke="#253557" stroke-width="1" opacity="0.5"/>
+          <line x1="80" y1="140" x2="320" y2="140" stroke="#253557" stroke-width="1" opacity="0.5"/>
 
-          <g class="idle-radar-text" text-anchor="middle">
-            <text x="200" y="10">000°</text>
-            <text x="376" y="143">090°</text>
-            <text x="200" y="278">180°</text>
-            <text x="24" y="143">270°</text>
-            <text x="200" y="126" fill="var(--slate)" opacity="0.5">RAYON 90 KM</text>
+          <g class="radar-sweep-idle">
+            <path d="M200 140 L200 20 A120 120 0 0 1 285 55 Z" fill="url(#sweepGradientIdle)"/>
+            <line x1="200" y1="140" x2="200" y2="20" stroke="var(--radar-beam)" stroke-width="1" opacity="0.6"/>
+          </g>
+
+          <circle class="pulse-circle" cx="200" cy="140" r="4" fill="none" stroke="var(--cyan)"/>
+          <circle cx="200" cy="140" r="4.5" fill="var(--cyan)"/>
+
+          <g class="idle-radar-text" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="var(--slate)">
+            <text x="200" y="32">000°</text>
+            <text x="312" y="143">090°</text>
+            <text x="200" y="254">180°</text>
+            <text x="88" y="143">270°</text>
+            <text x="200" y="128" opacity="0.5">RAYON 90 KM</text>
           </g>
         </svg>
       </div>
@@ -1557,7 +1556,7 @@ function genererEcranVeilleRadar(){
       <div class="tactical-status">
         <div class="tactical-title">
           <span class="live-dot"></span>
-          VEILLE TACTIQUE ACTIVE • ESPACE AÉRIEN LIBRE
+          VEILLE RADAR ACTIVE • ESPACE AÉRIEN LIBRE
         </div>
         <div class="tactical-sub">EN ATTENTE D'UN SURVOL COMMERCIAL AVEC TRAJET COMPLET</div>
       </div>
@@ -1808,7 +1807,7 @@ function animer(){
           <g transform="rotate(${oTrack})">
             <polygon points="0,-4 3,3 -3,3" fill="#8fa1c2"/>
           </g>
-          <rect x="-4" y="-4" width="8" height="8" rx="1.5" fill="none" stroke="#8fa1c2" stroke-width="0.8"/>
+          <circle cx="0" cy="0" r="5" fill="none" stroke="#8fa1c2" stroke-width="0.8"/>
         </g>
       `;
     });
@@ -1841,7 +1840,7 @@ function animer(){
   }).join("");
 
   if(contrailLayer){
-    const contrailLength = 28;
+    const contrailLength = 26;
     const cStartX = ptActuel.x - contrailLength * Math.sin(trackRad);
     const cStartY = ptActuel.y + contrailLength * Math.cos(trackRad);
     contrailLayer.innerHTML = `
@@ -1851,8 +1850,8 @@ function animer(){
   }
 
   const distKm2Min = (gsKmh / 60) * 2;
-  const rPixelMax = 125;
-  const predPixels = Math.min((distKm2Min / currentRadarMaxKm) * rPixelMax, 75);
+  const rPixelMax = 120;
+  const predPixels = Math.min((distKm2Min / currentRadarMaxKm) * rPixelMax, 70);
   const predX = ptActuel.x + predPixels * Math.sin(trackRad);
   const predY = ptActuel.y - predPixels * Math.cos(trackRad);
 
