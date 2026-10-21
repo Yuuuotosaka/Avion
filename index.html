@@ -560,7 +560,6 @@ function radarHTML(avecAvion){
       <text x="200" y="14">${avecAvion?"N":"000°"}</text><text x="385" y="143">${avecAvion?"E":"090°"}</text><text x="200" y="275">${avecAvion?"S":"180°"}</text><text x="15" y="143">${avecAvion?"O":"270°"}</text>
     </g>
     <g font-family="JetBrains Mono" font-size="9">${lbls}</g>
-    <rect id="pulse" fill="none" stroke="var(--cyan)"/>
     <circle cx="200" cy="140" r="4" fill="var(--cyan)"/><circle cx="200" cy="140" r="8" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity=".5"/>
     ${avecAvion?`<g id="rcl" clip-path="url(#fc)"></g><g id="rsl" clip-path="url(#fc)"></g><g id="rml" clip-path="url(#fc)"></g>`:""}
   </svg></div>`;
@@ -571,7 +570,7 @@ function bindRadar(){
   const root=document.querySelector(".radar-box svg"); if(!root) return false;
   if(R.root===root) return true;
   for(const k in R) delete R[k];
-  Object.assign(R,{root,beam:$("beam"),pulse:$("pulse"),l:[$("rl1"),$("rl2"),$("rl3")],sec:{},col:null,tr:null,lastQ:0,lastDs:""});
+  Object.assign(R,{root,beam:$("beam"),l:[$("rl1"),$("rl2"),$("rl3")],sec:{},col:null,tr:null,lastQ:0,lastDs:""});
   const ml=$("rml");
   if(ml){
     R.ml=ml; R.secg=$("rsl");
@@ -618,11 +617,6 @@ function animer(now){
   const per=R.ml?4500:7000, p=(now%per)/per, bx=20+p*360;
   R.beam.setAttribute("transform",`translate(${bx.toFixed(1)} 0)`);
   R.beam.setAttribute("opacity",Math.min(1,p*20,(1-p)*20).toFixed(2));
-  const q=(now%2800)/2800, e=1-(1-q)**3, w=8+e*332, h=6+e*232;
-  const pu=R.pulse; pu.setAttribute("x",(200-w/2).toFixed(1)); pu.setAttribute("y",(140-h/2).toFixed(1));
-  pu.setAttribute("width",w.toFixed(1)); pu.setAttribute("height",h.toFixed(1));
-  pu.setAttribute("opacity",(.9*(1-q)).toFixed(2)); pu.setAttribute("stroke-width",(2-1.5*q).toFixed(2));
-
   if(!R.ml||transitioning||!selHex||!fleet[selHex]||!currentPos) return;
   const ac=fleet[selHex], l=livePos(ac,performance.now()), pt=proj(l.lat,l.lon);
   const track=typeof ac.track==="number"?ac.track:0, tr=track*Math.PI/180, sn=Math.sin(tr), cs=Math.cos(tr);
