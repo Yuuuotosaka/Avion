@@ -470,28 +470,25 @@ body.night-mode .plane-canvas{
   min-height:0;
 }
 
-/* CARTE RADAR RECTANGULAIRE AVEC FONDU PÉRIPHÉRIQUE (HUD TACTIQUE) */
+/* CARTE RADAR TACTIQUE RECTANGULAIRE SANS EFFET DE CERCLE */
 .radar-box{
   width:100%;
   height:100%;
-  max-height:48vh;
   position:relative;
   border-radius:12px;
-  background:radial-gradient(ellipse at center, rgba(19, 34, 63, 0.45) 0%, rgba(10, 17, 32, 0.8) 75%);
-  border:1px solid rgba(37, 53, 87, 0.4);
+  background:linear-gradient(145deg, rgba(16, 26, 48, 0.75), rgba(9, 14, 26, 0.85));
+  border:1px solid var(--line);
+  box-shadow:inset 0 0 35px rgba(0,0,0,0.65), 0 4px 20px rgba(0,0,0,0.35);
   overflow:hidden;
-  /* Fondu progressif sur les 4 côtés */
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 98%);
-  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 98%);
 }
 body.night-mode .radar-box{
-  background:radial-gradient(ellipse at center, rgba(32, 19, 9, 0.45) 0%, rgba(9, 5, 3, 0.85) 75%);
-  border-color:rgba(61, 37, 20, 0.45);
+  background:linear-gradient(145deg, rgba(26, 16, 9, 0.8), rgba(9, 5, 3, 0.9));
+  border-color:var(--line);
 }
 .radar-box svg{width:100%;height:100%;display:block}
 
 .radar-sweep{
-  transform-origin:150px 150px;
+  transform-origin:200px 140px;
   animation:radarSweepAnim 4.5s linear infinite;
 }
 @keyframes radarSweepAnim{
@@ -500,27 +497,17 @@ body.night-mode .radar-box{
 }
 
 .radar-sweep-idle{
-  transform-origin:150px 150px;
+  transform-origin:200px 140px;
   animation:radarSweepAnim 8s linear infinite;
 }
 
 .pulse-circle{
-  transform-origin:150px 150px;
+  transform-origin:200px 140px;
   animation:radarPulse 2.8s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
 }
 @keyframes radarPulse{
   0%{ r:4; opacity:0.9; stroke-width:2; }
-  100%{ r:120; opacity:0; stroke-width:0.5; }
-}
-
-.idle-radar-grid line{
-  stroke:#253557; stroke-dasharray:3 4; opacity:0.35;
-}
-.idle-radar-text{
-  font-family:'JetBrains Mono',monospace; font-size:9px; fill:var(--slate); letter-spacing:.08em;
-}
-.idle-center-cross{
-  stroke:var(--cyan); stroke-width:1; opacity:0.6;
+  100%{ r:150; opacity:0; stroke-width:0.5; }
 }
 
 .stats{
@@ -653,20 +640,22 @@ body.night-mode .radar-box{
   align-items:center;
   justify-content:center;
   gap:16px;
-  padding:20px;
+  padding:14px;
   flex:1;
+  min-height:0;
   animation:arriveAvion 1s ease forwards;
 }
 .tactical-status{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:6px;
+  gap:4px;
   text-align:center;
+  flex-shrink:0;
 }
 .tactical-title{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:20px;
+  font-size:19px;
   font-weight:700;
   color:var(--cloud);
   letter-spacing:.06em;
@@ -1202,16 +1191,17 @@ function couleurSelonAltitude(altM){
   return "#e0e7ff";
 }
 
+/* Projection radar centrée sur la zone rectangulaire (centre 200, 140) */
 function projeterSurRadar(posUser, latAvion, lonAvion, maxKm){
   const dist = distanceKm(posUser.lat, posUser.lon, latAvion, lonAvion);
   const azimut = gisement(posUser.lat, posUser.lon, latAvion, lonAvion);
-  const rPixelMax = 120;
+  const rPixelMax = 125;
   const distRatio = Math.min(dist / maxKm, 1.25);
   const rPixel = distRatio * rPixelMax;
   const angleRad = (azimut - 90) * (Math.PI / 180);
   return {
-    x: 150 + rPixel * Math.cos(angleRad),
-    y: 150 + rPixel * Math.sin(angleRad),
+    x: 200 + rPixel * Math.cos(angleRad),
+    y: 140 + rPixel * Math.sin(angleRad),
     dist,
     azimut
   };
@@ -1449,57 +1439,60 @@ function genererSvgAvion(t){
   `;
 }
 
-/* Grille tactique rectangulaire avec anneaux de portée centrés */
+/* Grille tactique rectangulaire avec repères orthonormés */
 function genererStructureRadar(maxKm){
   const tier1 = Math.round(maxKm / 3);
   const tier2 = Math.round((maxKm * 2) / 3);
 
   return `
     <div class="radar-box" aria-label="Carte radar de position relative">
-      <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">
+      <svg viewBox="0 0 400 280" preserveAspectRatio="none">
         <defs>
           <linearGradient id="sweepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.35"/>
+            <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.38"/>
             <stop offset="60%" stop-color="var(--radar-beam)" stop-opacity="0.05"/>
             <stop offset="100%" stop-color="var(--radar-beam)" stop-opacity="0"/>
           </linearGradient>
         </defs>
 
-        <!-- Grille tactique rectangulaire -->
-        <g stroke="#253557" stroke-width="0.8" opacity="0.35">
-          <line x1="0" y1="75" x2="300" y2="75"/>
-          <line x1="0" y1="225" x2="300" y2="225"/>
-          <line x1="75" y1="0" x2="75" y2="300"/>
-          <line x1="225" y1="0" x2="225" y2="300"/>
+        <!-- Grille orthonormée tactique rectangulaire -->
+        <g stroke="#253557" stroke-width="1" opacity="0.4">
+          <line x1="0" y1="70" x2="400" y2="70" stroke-dasharray="2 4"/>
+          <line x1="0" y1="210" x2="400" y2="210" stroke-dasharray="2 4"/>
+          <line x1="100" y1="0" x2="100" y2="280" stroke-dasharray="2 4"/>
+          <line x1="300" y1="0" x2="300" y2="280" stroke-dasharray="2 4"/>
         </g>
 
-        <!-- Anneaux concentriques de portée -->
-        <circle cx="150" cy="150" r="40" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
-        <circle cx="150" cy="150" r="80" fill="none" stroke="#253557" stroke-width="1" stroke-dasharray="2 4"/>
-        <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.3"/>
+        <!-- Arcs de portée discrets -->
+        <g fill="none" stroke="#253557" stroke-dasharray="3 5" opacity="0.55">
+          <circle cx="200" cy="140" r="42"/>
+          <circle cx="200" cy="140" r="84"/>
+          <circle cx="200" cy="140" r="126" stroke="#253557" stroke-dasharray="none" stroke-width="1.2"/>
+        </g>
 
-        <!-- Faisceau radar rotatif -->
+        <!-- Axes cardinaux principaux -->
+        <line x1="200" y1="0" x2="200" y2="280" stroke="#253557" stroke-width="1.2" opacity="0.6"/>
+        <line x1="0" y1="140" x2="400" y2="140" stroke="#253557" stroke-width="1.2" opacity="0.6"/>
+
+        <!-- Faisceau radar balayant toute la surface -->
         <g class="radar-sweep">
-          <path d="M150 150 L150 -30 A180 180 0 0 1 275 25 Z" fill="url(#sweepGradient)"/>
-          <line x1="150" y1="150" x2="150" y2="-30" stroke="var(--radar-beam)" stroke-width="1.5" opacity="0.8"/>
+          <path d="M200 140 L200 -70 A250 250 0 0 1 370 20 Z" fill="url(#sweepGradient)"/>
+          <line x1="200" y1="140" x2="200" y2="-70" stroke="var(--radar-beam)" stroke-width="1.5" opacity="0.8"/>
         </g>
 
-        <!-- Axes cardinaux et repères -->
-        <line x1="150" y1="0" x2="150" y2="300" stroke="#253557" stroke-width="1" opacity="0.5"/>
-        <line x1="0" y1="150" x2="300" y2="150" stroke="#253557" stroke-width="1" opacity="0.5"/>
+        <!-- Indicateurs textuels de distance et d'orientation -->
         <g fill="#8fa1c2" font-family="JetBrains Mono" font-size="10" text-anchor="middle">
-          <text x="150" y="16">N</text><text x="290" y="153">E</text><text x="150" y="292">S</text><text x="10" y="153">O</text>
-          <text id="radar-lbl-1" x="150" y="106" fill="#8fa1c2" opacity="0.6">${tier1} km</text>
-          <text id="radar-lbl-2" x="150" y="66" fill="#8fa1c2" opacity="0.6">${tier2} km</text>
-          <text id="radar-lbl-3" x="150" y="26" fill="var(--sign)" opacity="0.75" font-size="9">${maxKm} km</text>
+          <text x="200" y="16">N</text><text x="388" y="144">E</text><text x="200" y="272">S</text><text x="12" y="144">O</text>
+          <text id="radar-lbl-1" x="200" y="94" fill="#8fa1c2" opacity="0.6">${tier1} km</text>
+          <text id="radar-lbl-2" x="200" y="52" fill="#8fa1c2" opacity="0.6">${tier2} km</text>
+          <text id="radar-lbl-3" x="200" y="26" fill="var(--sign)" opacity="0.85" font-size="9">${maxKm} km</text>
         </g>
 
-        <!-- Position utilisateur au centre -->
-        <circle class="pulse-circle" cx="150" cy="150" r="4" fill="none" stroke="var(--cyan)"/>
-        <circle cx="150" cy="150" r="4.5" fill="var(--cyan)"/>
-        <circle cx="150" cy="150" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
+        <!-- Centre utilisateur -->
+        <circle class="pulse-circle" cx="200" cy="140" r="4" fill="none" stroke="var(--cyan)"/>
+        <circle cx="200" cy="140" r="4.5" fill="var(--cyan)"/>
+        <circle cx="200" cy="140" r="9" fill="none" stroke="var(--cyan)" stroke-width="1.2" opacity="0.4"/>
 
-        <!-- Couches dynamiques -->
         <g id="radar-contrail-layer"></g>
         <g id="radar-secondary-layer"></g>
         <g id="radar-dynamic-layer"></g>
@@ -1512,7 +1505,7 @@ function genererEcranVeilleRadar(){
   return `
     <div class="tactical-idle">
       <div class="radar-box">
-        <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">
+        <svg viewBox="0 0 400 280" preserveAspectRatio="none">
           <defs>
             <linearGradient id="sweepGradientIdle" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="var(--radar-beam)" stop-opacity="0.25"/>
@@ -1521,36 +1514,36 @@ function genererEcranVeilleRadar(){
             </linearGradient>
           </defs>
 
-          <g class="idle-radar-grid">
-            <line x1="0" y1="75" x2="300" y2="75"/>
-            <line x1="0" y1="225" x2="300" y2="225"/>
-            <line x1="75" y1="0" x2="75" y2="300"/>
-            <line x1="225" y1="0" x2="225" y2="300"/>
-            <circle cx="150" cy="150" r="30" fill="none"/>
-            <circle cx="150" cy="150" r="60" fill="none"/>
-            <circle cx="150" cy="150" r="90" fill="none"/>
-            <circle cx="150" cy="150" r="120" fill="none" stroke="#253557" stroke-width="1.3"/>
-            <line x1="150" y1="10" x2="150" y2="290"/>
-            <line x1="10" y1="150" x2="290" y2="150"/>
-            <line x1="45" y1="45" x2="255" y2="255"/>
-            <line x1="255" y1="45" x2="45" y2="255"/>
+          <!-- Grille tactique -->
+          <g stroke="#253557" stroke-width="1" stroke-dasharray="2 4" opacity="0.35">
+            <line x1="0" y1="70" x2="400" y2="70"/>
+            <line x1="0" y1="210" x2="400" y2="210"/>
+            <line x1="100" y1="0" x2="100" y2="280"/>
+            <line x1="300" y1="0" x2="300" y2="280"/>
+            <circle cx="200" cy="140" r="35" fill="none"/>
+            <circle cx="200" cy="140" r="70" fill="none"/>
+            <circle cx="200" cy="140" r="105" fill="none"/>
+            <circle cx="200" cy="140" r="130" fill="none" stroke="#253557" stroke-width="1.3"/>
           </g>
+
+          <line x1="200" y1="0" x2="200" y2="280" stroke="#253557" stroke-width="1.2" opacity="0.5"/>
+          <line x1="0" y1="140" x2="400" y2="140" stroke="#253557" stroke-width="1.2" opacity="0.5"/>
 
           <g class="radar-sweep-idle">
-            <path d="M150 150 L150 -30 A180 180 0 0 1 275 25 Z" fill="url(#sweepGradientIdle)"/>
-            <line x1="150" y1="150" x2="150" y2="-30" stroke="var(--radar-beam)" stroke-width="1" opacity="0.6"/>
+            <path d="M200 140 L200 -70 A250 250 0 0 1 370 20 Z" fill="url(#sweepGradientIdle)"/>
+            <line x1="200" y1="140" x2="200" y2="-70" stroke="var(--radar-beam)" stroke-width="1" opacity="0.6"/>
           </g>
 
-          <circle class="pulse-circle" cx="150" cy="150" r="4" fill="none" stroke="var(--cyan)"/>
-          <line class="idle-center-cross" x1="144" y1="150" x2="156" y2="150"/>
-          <line class="idle-center-cross" x1="150" y1="144" x2="150" y2="156"/>
+          <circle class="pulse-circle" cx="200" cy="140" r="4" fill="none" stroke="var(--cyan)"/>
+          <line class="idle-center-cross" x1="194" y1="140" x2="206" y2="140"/>
+          <line class="idle-center-cross" x1="200" y1="134" x2="200" y2="146"/>
 
           <g class="idle-radar-text" text-anchor="middle">
-            <text x="150" y="18">000°</text>
-            <text x="290" y="153">090°</text>
-            <text x="150" y="292">180°</text>
-            <text x="10" y="153">270°</text>
-            <text x="150" y="136" fill="var(--slate)" opacity="0.5">RAYON 90 KM</text>
+            <text x="200" y="18">000°</text>
+            <text x="388" y="144">090°</text>
+            <text x="200" y="272">180°</text>
+            <text x="12" y="144">270°</text>
+            <text x="200" y="126" fill="var(--slate)" opacity="0.5">RAYON 90 KM</text>
           </g>
         </svg>
       </div>
@@ -1852,7 +1845,7 @@ function animer(){
   }
 
   const distKm2Min = (gsKmh / 60) * 2;
-  const rPixelMax = 120;
+  const rPixelMax = 125;
   const predPixels = Math.min((distKm2Min / currentRadarMaxKm) * rPixelMax, 75);
   const predX = ptActuel.x + predPixels * Math.sin(trackRad);
   const predY = ptActuel.y - predPixels * Math.cos(trackRad);
